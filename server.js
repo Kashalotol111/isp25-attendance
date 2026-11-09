@@ -94,13 +94,11 @@ db.serialize(() => {
 
     // Расписание
     const scheduleData = [
-        // Понедельник (чётная)
         { week: 'even', day: 'Понедельник', pair: 1, start: '8:45', end: '10:15', subj: 'МДК.01.02 Инстр.средств. разработки ПО', type: 'практика', sub: 2, room: '308', teacher: 'Попова Т.А.' },
         { week: 'even', day: 'Понедельник', pair: 2, start: '10:25', end: '11:55', subj: 'МДК.01.02 Инстр.средств. разработки ПО', type: 'лекция', sub: null, room: '312', teacher: 'Попова Т.А.' },
         { week: 'even', day: 'Понедельник', pair: 3, start: '12:05', end: '14:20', subj: 'МДК.01.02 Инстр.средств. разработки ПО', type: 'практика', sub: 1, room: '319', teacher: 'Попова Т.А.' },
         { week: 'even', day: 'Понедельник', pair: 4, start: '14:30', end: '16:00', subj: 'МДК.01.02 Инстр.средств. разработки ПО', type: 'практика', sub: 1, room: '319', teacher: 'Попова Т.А.' },
 
-        // Вторник (чётная)
         { week: 'even', day: 'Вторник', pair: 1, start: '8:45', end: '10:15', subj: 'Информ. технолог.', type: 'практика', sub: 1, room: '319', teacher: 'Строганова В.А.' },
         { week: 'even', day: 'Вторник', pair: 1, start: '8:45', end: '10:15', subj: 'МДК.01.02 Инстр.средств. разработки ПО', type: 'практика', sub: 2, room: '315', teacher: 'Попова Т.А.' },
         { week: 'even', day: 'Вторник', pair: 2, start: '10:25', end: '11:55', subj: 'МДК 01.01 Техн.разр.прогр.обесп.', type: 'практика', sub: 1, room: '319', teacher: 'Строганова В.А.' },
@@ -109,41 +107,35 @@ db.serialize(() => {
         { week: 'even', day: 'Вторник', pair: 4, start: '14:30', end: '16:00', subj: 'Информ. технолог.', type: 'практика', sub: 2, room: '319', teacher: 'Строганова В.А.' },
         { week: 'even', day: 'Вторник', pair: 5, start: '16:10', end: '17:40', subj: 'МДК 01.01 Техн.разр.прогр.обесп.', type: 'практика', sub: 2, room: '319', teacher: 'Строганова В.А.' },
 
-        // Среда (нечётная)
         { week: 'odd', day: 'Среда', pair: 1, start: '8:45', end: '10:15', subj: 'Безопасность жизнедеятельности', type: 'практика', sub: null, room: '202а', teacher: 'Кириллова О.О.' },
         { week: 'odd', day: 'Среда', pair: 2, start: '10:25', end: '11:55', subj: 'Физическая культура', type: 'практика', sub: null, room: 'сп.зал', teacher: 'Грайфер В.Н.' },
         { week: 'odd', day: 'Среда', pair: 3, start: '12:05', end: '14:20', subj: 'Операт.сист.и среды', type: 'лекция', sub: null, room: '319', teacher: 'Моор А.А.' },
         { week: 'odd', day: 'Среда', pair: 4, start: '14:30', end: '16:00', subj: 'МДК 01.01 Техн.разр.прогр.обесп.', type: 'практика', sub: 2, room: '302', teacher: 'Строганова В.А.' },
         { week: 'odd', day: 'Среда', pair: 5, start: '16:10', end: '17:40', subj: 'Информ. технолог.', type: 'практика', sub: 2, room: '302', teacher: 'Строганова В.А.' },
 
-        // Среда (чётная)
         { week: 'even', day: 'Среда', pair: 1, start: '8:45', end: '10:15', subj: 'Операт.сист.и среды', type: 'лекция', sub: null, room: '202б', teacher: 'Моор А.А.' },
         { week: 'even', day: 'Среда', pair: 2, start: '10:25', end: '11:55', subj: 'Физическая культура', type: 'практика', sub: null, room: 'сп.зал', teacher: 'Грайфер В.Н.' },
         { week: 'even', day: 'Среда', pair: 3, start: '12:05', end: '14:20', subj: 'Безопасность жизнедеятельности', type: 'практика', sub: null, room: '1', teacher: 'Кириллова О.О.' },
         { week: 'even', day: 'Среда', pair: 4, start: '14:30', end: '16:00', subj: 'Ин.яз. в проф.деят-ти (англ.)', type: 'практика', sub: null, room: '407а', teacher: 'Лебедев В.С.' },
         { week: 'even', day: 'Среда', pair: 5, start: '16:10', end: '17:40', subj: 'Информ. технолог.', type: 'лекция', sub: null, room: '202а', teacher: 'Строганова В.А.' },
 
-        // Четверг (нечётная)
         { week: 'odd', day: 'Четверг', pair: 2, start: '10:25', end: '11:55', subj: 'МДК 01.01 Техн.разр.прогр.обесп.', type: 'практика', sub: 1, room: '302', teacher: 'Строганова В.А.' },
         { week: 'odd', day: 'Четверг', pair: 3, start: '12:05', end: '14:20', subj: 'МДК.01.02 Инстр.средств. разработки ПО', type: 'практика', sub: 1, room: '319', teacher: 'Попова Т.А.' },
         { week: 'odd', day: 'Четверг', pair: 4, start: '14:30', end: '16:00', subj: 'Основы алгоритмизации и программирования', type: 'лекция', sub: null, room: '315', teacher: 'Журавлева Т.А.' },
         { week: 'odd', day: 'Четверг', pair: 5, start: '16:10', end: '17:40', subj: 'Информ. технолог.', type: 'лекция', sub: null, room: '302', teacher: 'Строганова В.А.' },
 
-        // Пятница (нечётная)
         { week: 'odd', day: 'Пятница', pair: 1, start: '8:45', end: '10:15', subj: 'Осн.филос.', type: 'лекция', sub: null, room: '305', teacher: 'Пересторонина М.Г.' },
         { week: 'odd', day: 'Пятница', pair: 2, start: '10:25', end: '11:55', subj: 'Осн.филос.', type: 'практика', sub: null, room: '305', teacher: 'Пересторонина М.Г.' },
         { week: 'odd', day: 'Пятница', pair: 3, start: '12:05', end: '14:20', subj: 'История', type: 'лекция', sub: null, room: '303', teacher: 'Арзамазов М.Н.' },
         { week: 'odd', day: 'Пятница', pair: 4, start: '14:30', end: '16:00', subj: 'Безопасность жизнедеятельности', type: 'лекция', sub: null, room: '411', teacher: 'Кириллова О.О.' },
         { week: 'odd', day: 'Пятница', pair: 5, start: '16:10', end: '17:40', subj: 'Информ. технолог.', type: 'практика', sub: 1, room: '315', teacher: 'Строганова В.А.' },
 
-        // Пятница (чётная)
         { week: 'even', day: 'Пятница', pair: 1, start: '8:45', end: '10:15', subj: 'Элемен.высш.матем.', type: 'практика', sub: null, room: '407', teacher: 'Еремина Е.А.' },
         { week: 'even', day: 'Пятница', pair: 2, start: '10:25', end: '11:55', subj: 'Осн.филос.', type: 'лекция', sub: null, room: '202а', teacher: 'Пересторонина М.Г.' },
         { week: 'even', day: 'Пятница', pair: 3, start: '12:05', end: '14:20', subj: 'История', type: 'практика', sub: null, room: '407', teacher: 'Арзамазов М.Н.' },
         { week: 'even', day: 'Пятница', pair: 4, start: '14:30', end: '16:00', subj: 'Элемен.высш.матем.', type: 'лекция', sub: null, room: '305', teacher: 'Еремина Е.А.' },
         { week: 'even', day: 'Пятница', pair: 5, start: '16:10', end: '17:40', subj: 'Ин.яз. в проф.деят-ти (англ.)', type: 'практика', sub: null, room: '407а', teacher: 'Лебедев В.С.' },
 
-        // Суббота (обе недели)
         { week: 'odd', day: 'Суббота', pair: 1, start: '8:45', end: '10:15', subj: 'Операт.сист.и среды', type: 'практика', sub: 1, room: '302', teacher: 'Щукин Е.Ю.' },
         { week: 'odd', day: 'Суббота', pair: 1, start: '8:45', end: '10:15', subj: 'Основы алгоритмизации и программирования', type: 'практика', sub: 2, room: '315', teacher: 'Журавлева Т.А.' },
         { week: 'odd', day: 'Суббота', pair: 2, start: '10:25', end: '11:55', subj: 'Основы алгоритмизации и программирования', type: 'практика', sub: 1, room: '315', teacher: 'Журавлева Т.А.' },
@@ -199,17 +191,23 @@ app.get('/api/attendance', (req, res) => {
     });
 });
 
+// Исправлено сохранение: записываем только те статусы, которые не 'present' (чтобы не забивать базу лишним, либо сохраняем индивидуально)
 app.post('/api/attendance', (req, res) => {
     const { date, schedule_id, records, userRole } = req.body;
     if (userRole === 'kurator' || userRole === 'student') {
         return res.status(403).json({ error: 'У вас нет прав на редактирование посещаемости!' });
     }
     db.serialize(() => {
+        // Удаляем старые записи за эту дату и пару
         db.run(`DELETE FROM attendance WHERE date = ? AND schedule_id = ?`, [date, schedule_id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
+            
             const stmt = db.prepare(`INSERT INTO attendance (date, schedule_id, student_id, status, comment) VALUES (?, ?, ?, ?, ?)`);
             records.forEach(r => {
-                stmt.run(date, schedule_id, r.student_id, r.status, r.comment || '');
+                // Сохраняем только пропуски (absent_invalid или absent_valid), чтобы присутствие не дублировалось глобально
+                if (r.status !== 'present') {
+                    stmt.run(date, schedule_id, r.student_id, r.status, r.comment || '');
+                }
             });
             stmt.finalize();
             res.json({ success: true });
@@ -217,7 +215,6 @@ app.post('/api/attendance', (req, res) => {
     });
 });
 
-// Общая статистика пропусков
 app.get('/api/stats', (req, res) => {
     const query = `
         SELECT 
@@ -239,7 +236,6 @@ app.get('/api/stats', (req, res) => {
     });
 });
 
-// Статистика за месяц для конкретного студента
 app.get('/api/student-stats', (req, res) => {
     const { student_id, year_month } = req.query;
     const query = `
@@ -249,12 +245,5 @@ app.get('/api/student-stats', (req, res) => {
         WHERE a.student_id = ? AND a.date LIKE ? AND a.status != 'present'
         ORDER BY a.date DESC
     `;
-    db.all(query, [student_id, `${year_month}%`], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
-    });
-});
-
-app.listen(PORT, () => {
-    console.log(`Сервер запущен на порту ${PORT}`);
+    db.all(query, [student_id, `${year_month}\%`], (err, rows) => { if (err) return res.status(500).json({ error: err.message }); res.json(rows); }); });  app.listen(PORT, () => { console.log(`Сервер запущен на порту ${PORT}`);
 });
