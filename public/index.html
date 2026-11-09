@@ -3,36 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учёт посещаемости — ИСП-О-25 (ГГУ)</title>
+    <title>Учёт посещаемости — ИСП-О-25</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-    <!-- Форма входа -->
+    <!-- Авторизация -->
     <div id="login-modal" class="fixed inset-0 bg-slate-950/90 flex items-center justify-center p-4 z-50">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
             <h2 class="text-xl font-bold mb-1 text-white">Группа ИСП-О-25</h2>
-            <p class="text-slate-400 text-sm mb-6">Введите персональные данные для входа</p>
+            <p class="text-slate-400 text-sm mb-6">Введите логин и пароль</p>
             
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Логин</label>
-                    <input type="text" id="login-input" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                    <input type="text" id="login-input" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="например: tagir.abbasov или admin">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Пароль</label>
-                    <input type="password" id="password-input" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                    <input type="password" id="password-input" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition text-sm">Войти в систему</button>
             </form>
+            <div class="mt-4 text-xs text-slate-400 space-y-1 border-t border-slate-700 pt-3">
+                <p>👑 Староста: логин <code class="text-indigo-300">admin</code> (пароль: <code class="text-indigo-300">admin123</code>)</p>
+                <p>🎓 Куратор: логин <code class="text-indigo-300">kurator</code> (пароль: <code class="text-indigo-300">kurator123</code>)</p>
+                <p>👤 Студенты: формат <code class="text-indigo-300">tagir.abbasov</code> (пароль: <code class="text-indigo-300">isp25-pass</code>)</p>
+            </div>
         </div>
     </div>
 
-    <!-- Основной интерфейс -->
+    <!-- Основное приложение -->
     <div id="main-app" class="hidden max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-        <header class="flex justify-between items-center bg-slate-800 border border-slate-700 p-4 rounded-xl">
+        <header class="flex justify-between items-center bg-slate-800 border border-slate-700 p-4 rounded-xl shadow">
             <div>
                 <h1 class="text-lg font-bold text-white">Журнал посещаемости ИСП-О-25</h1>
                 <p id="user-badge" class="text-xs text-indigo-400 font-medium mt-0.5"></p>
@@ -40,10 +45,17 @@
             <button onclick="logout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-600 transition">Выйти</button>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
-                <label class="block text-xs text-slate-400 mb-1">Выберите дату занятий</label>
-                <input type="date" id="selected-date" onchange="loadSchedule()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
+                <label class="block text-xs text-slate-400 mb-1">Выберите неделю</label>
+                <select id="week-select" onchange="loadSchedule()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                    <option value="odd">Нечетная неделя</option>
+                    <option value="even">Четная неделя</option>
+                </select>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                <label class="block text-xs text-slate-400 mb-1">Дата занятий</label>
+                <input type="date" id="selected-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
             </div>
             <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center justify-between">
                 <div>
@@ -53,25 +65,25 @@
             </div>
         </div>
 
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
-            <h3 class="text-sm font-bold text-white mb-4">Расписание и пары</h3>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+            <h3 class="text-sm font-bold text-white mb-4">Полное расписание пар</h3>
             <div id="schedule-list" class="space-y-3"></div>
         </div>
     </div>
 
-    <!-- Модальное окно отметки посещаемости -->
+    <!-- Модальное окно отметки (энок) -->
     <div id="attendance-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
             <div class="flex justify-between items-center pb-4 border-b border-slate-700">
                 <div>
                     <h3 id="modal-title" class="font-bold text-lg text-white">Пара</h3>
                     <p id="modal-subtitle" class="text-xs text-slate-400"></p>
                 </div>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
             </div>
 
             <div class="my-3">
-                <input type="text" id="student-search" oninput="filterStudentsList()" placeholder="Поиск студента..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
+                <input type="text" id="student-search" oninput="filterStudentsList()" placeholder="Поиск студента по фамилии..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
             </div>
 
             <div class="my-2 space-y-2 overflow-y-auto flex-1 pr-2" id="modal-students-container"></div>
@@ -120,8 +132,7 @@
         }
 
         function getRoleName(role) {
-            if (role === 'starosta') return 'Староста';
-            if (role === 'zam_starosty') return 'Зам. старосты';
+            if (role === 'admin') return 'Староста / Админ';
             if (role === 'kurator') return 'Куратор';
             return 'Студент';
         }
@@ -138,8 +149,9 @@
         }
 
         async function loadSchedule() {
+            const weekType = document.getElementById('week-select').value;
             try {
-                const res = await fetch('/api/schedule');
+                const res = await fetch(`/api/schedule?week=${weekType}`);
                 scheduleCache = await res.json();
                 renderSchedule();
             } catch (err) {
@@ -151,37 +163,25 @@
             const container = document.getElementById('schedule-list');
             container.innerHTML = '';
 
-            const dateVal = document.getElementById('selected-date').value;
-            if (!dateVal) return;
-
-            const dayOfWeek = getDayOfWeekRus(dateVal);
-            // Определяем четность недели (упрощенно по номеру недели года)
-            const d = new Date(dateVal);
-            const startYear = new Date(d.getFullYear(), 0, 1);
-            const weekNumber = Math.ceil((((d - startYear) / 86400000) + startYear.getDay() + 1) / 7);
-            const weekType = weekNumber % 2 === 0 ? 'even' : 'odd';
-
-            const filtered = scheduleCache.filter(s => s.day_of_week === dayOfWeek && (s.week_type === weekType || s.week_type === 'all'));
-
-            if (filtered.length === 0) {
-                container.innerHTML = `<p class="text-sm text-slate-400 py-4 text-center">На этот день (${dayOfWeek}) пар по расписанию нет.</p>`;
+            if (scheduleCache.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-400 py-4 text-center">На эту неделю нет пар в базе.</p>`;
                 return;
             }
 
-            filtered.forEach(pair => {
+            scheduleCache.forEach(pair => {
                 const item = document.createElement('div');
-                item.className = "bg-slate-900/60 border border-slate-700/60 rounded-lg p-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:border-indigo-500 transition";
+                item.className = "bg-slate-900/60 border border-slate-700/60 rounded-lg p-3.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:border-indigo-500 transition";
                 item.innerHTML = `
                     <div>
                         <div class="flex items-center gap-2 mb-1">
-                            <span class="text-xs font-bold text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded">Пара #${pair.pair_number}</span>
+                            <span class="text-xs font-bold text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded">${pair.day_of_week} | Пара #${pair.pair_number}</span>
                             <span class="text-xs text-slate-400">${pair.start_time} - ${pair.end_time}</span>
                             <span class="text-xs text-slate-500 uppercase">(${pair.type})</span>
                         </div>
                         <h4 class="font-medium text-white text-sm">${pair.subject}</h4>
                         <p class="text-xs text-slate-400 mt-0.5">Ауд. ${pair.room || '—'} | Преп. ${pair.teacher || '—'} ${pair.subgroup ? `| Подгруппа ${pair.subgroup}` : ''}</p>
                     </div>
-                    <button onclick="openAttendanceModal(${pair.id})" class="bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg transition font-medium">
+                    <button onclick="openAttendanceModal(${pair.id})" class="bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs px-3.5 py-2 rounded-lg transition font-medium">
                         ${currentUser.role === 'kurator' || currentUser.role === 'student' ? 'Посмотреть журнал' : 'Отметить посещаемость'}
                     </button>
                 `;
@@ -189,31 +189,25 @@
             });
         }
 
-        function getDayOfWeekRus(dateString) {
-            const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-            const d = new Date(dateString);
-            return days[d.getDay()];
-        }
-
         async function openAttendanceModal(scheduleId) {
             activePairId = scheduleId;
             const pair = scheduleCache.find(s => s.id === scheduleId);
             if (!pair) return;
 
-            document.getElementById('modal-title').innerText = `Пара №${pair.pair_number}: ${pair.subject}`;
+            document.getElementById('modal-title').innerText = `${pair.day_of_week} — Пара №${pair.pair_number}: ${pair.subject}`;
             document.getElementById('modal-subtitle').innerText = `${pair.start_time} - ${pair.end_time} | Преподаватель: ${pair.teacher || '—'}`;
 
             const dateVal = document.getElementById('selected-date').value;
-            let absentees = [];
+            let attendanceRecords = [];
             try {
                 const res = await fetch(`/api/attendance?date=${dateVal}&schedule_id=${scheduleId}`);
-                absentees = await res.json();
+                attendanceRecords = await res.json();
             } catch (err) {
                 console.error('Ошибка загрузки посещаемости', err);
             }
 
-            const absentMap = {};
-            absentees.forEach(a => { absentMap[a.student_id] = a.comment || 'н'; });
+            const recordMap = {};
+            attendanceRecords.forEach(r => { recordMap[r.student_id] = r.status; });
 
             const container = document.getElementById('modal-students-container');
             container.innerHTML = '';
@@ -224,8 +218,7 @@
             }
 
             listToRender.forEach(st => {
-                const isAbsent = absentMap[st.id] !== undefined;
-                const comment = isAbsent ? absentMap[st.id] : '';
+                const status = recordMap[st.id] || 'present';
 
                 const row = document.createElement('div');
                 row.className = "student-row flex items-center justify-between bg-slate-900/80 p-2.5 rounded-lg border border-slate-700/50";
@@ -234,12 +227,11 @@
                         <span class="text-sm font-medium text-slate-200">${st.name}</span>
                         <span class="text-xs text-slate-500 ml-2">(${st.subgroup} подгр.)</span>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <label class="flex items-center gap-1.5 text-xs text-rose-400 cursor-pointer">
-                            <input type="checkbox" data-student-id="${st.id}" class="absent-checkbox rounded bg-slate-800 border-slate-700 text-rose-600 focus:ring-rose-500" ${isAbsent ? 'checked' : ''} ${currentUser.role === 'kurator' || currentUser.role === 'student' ? 'disabled' : ''}>
-                            Отсутствовал(а)
-                        </label>
-                    </div>
+                    <select data-student-id="${st.id}" class="status-select bg-slate-800 border border-slate-700 text-xs rounded px-2 py-1.5 text-slate-200 focus:outline-none focus:border-indigo-500" ${currentUser.role === 'kurator' || currentUser.role === 'student' ? 'disabled' : ''}>
+                        <option value="present" ${status === 'present' ? 'selected' : ''}>Был(а)</option>
+                        <option value="absent_invalid" ${status === 'absent_invalid' ? 'selected' : ''}>Н (Неуважительная)</option>
+                        <option value="absent_valid" ${status === 'absent_valid' ? 'selected' : ''}>Н (Уважительная)</option>
+                    </select>
                 `;
                 container.appendChild(row);
             });
@@ -268,16 +260,14 @@
 
         async function saveAttendance() {
             const dateVal = document.getElementById('selected-date').value;
-            const checkboxes = document.querySelectorAll('.absent-checkbox');
-            const absentees = [];
+            const selects = document.querySelectorAll('.status-select');
+            const records = [];
 
-            checkboxes.forEach(cb => {
-                if (cb.checked) {
-                    absentees.push({
-                        student_id: parseInt(cb.dataset.studentId),
-                        comment: 'н'
-                    });
-                }
+            selects.forEach(sel => {
+                records.push({
+                    student_id: parseInt(sel.dataset.studentId),
+                    status: sel.value
+                });
             });
 
             try {
@@ -287,7 +277,7 @@
                     body: JSON.stringify({
                         date: dateVal,
                         schedule_id: activePairId,
-                        absentees,
+                        records,
                         userRole: currentUser.role
                     })
                 });
