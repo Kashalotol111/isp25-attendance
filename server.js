@@ -13,8 +13,11 @@ const db = new sqlite3.Database(path.join(__dirname, 'attendance.db'), (err) => 
     else console.log('База данных успешно подключена.');
 });
 
-// Инициализация таблиц
+// Инициализация таблиц с авто-очисткой старой структуры users
 db.serialize(() => {
+    // Если таблица users была со старой структурой — удаляем её, чтобы создать заново
+    db.run(`DROP TABLE IF EXISTS users`);
+
     db.run(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
