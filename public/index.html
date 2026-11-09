@@ -14,12 +14,12 @@
     <div id="login-modal" class="fixed inset-0 bg-slate-950/90 flex items-center justify-center p-4 z-50">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
             <h2 class="text-xl font-bold mb-1 text-white">Группа ИСП-О-25</h2>
-            <p class="text-slate-400 text-sm mb-6">Введите логин и пароль</p>
+            <p class="text-slate-400 text-sm mb-6">Введите персональные учетные данные</p>
             
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Логин</label>
-                    <input type="text" id="login-input" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="например: tagir.abbasov или admin">
+                    <input type="text" id="login-input" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Пароль</label>
@@ -27,11 +27,6 @@
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition text-sm">Войти в систему</button>
             </form>
-            <div class="mt-4 text-xs text-slate-400 space-y-1 border-t border-slate-700 pt-3">
-                <p>👑 Староста: логин <code class="text-indigo-300">admin</code> (пароль: <code class="text-indigo-300">admin123</code>)</p>
-                <p>🎓 Куратор: логин <code class="text-indigo-300">kurator</code> (пароль: <code class="text-indigo-300">kurator123</code>)</p>
-                <p>👤 Студенты: формат <code class="text-indigo-300">tagir.abbasov</code> (пароль: <code class="text-indigo-300">isp25-pass</code>)</p>
-            </div>
         </div>
     </div>
 
@@ -42,7 +37,10 @@
                 <h1 class="text-lg font-bold text-white">Журнал посещаемости ИСП-О-25</h1>
                 <p id="user-badge" class="text-xs text-indigo-400 font-medium mt-0.5"></p>
             </div>
-            <button onclick="logout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-600 transition">Выйти</button>
+            <div class="flex items-center gap-2">
+                <button id="stats-btn" onclick="openStatsModal()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-2 rounded-lg transition font-medium">📊 Статистика и выгрузка</button>
+                <button onclick="logout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg border border-slate-600 transition">Выйти</button>
+            </div>
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -54,24 +52,30 @@
                 </select>
             </div>
             <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                <label class="block text-xs text-slate-400 mb-1">День недели</label>
+                <select id="day-select" onchange="renderSchedule()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                    <option value="all">Все дни недели</option>
+                    <option value="Понедельник">Понедельник</option>
+                    <option value="Вторник">Вторник</option>
+                    <option value="Среда">Среда</option>
+                    <option value="Четверг">Четверг</option>
+                    <option value="Пятница">Пятница</option>
+                    <option value="Суббота">Суббота</option>
+                </select>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
                 <label class="block text-xs text-slate-400 mb-1">Дата занятий</label>
                 <input type="date" id="selected-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
-            </div>
-            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center justify-between">
-                <div>
-                    <span class="block text-xs text-slate-400">Статус системы</span>
-                    <span class="text-sm font-bold text-emerald-400">Активна (Render)</span>
-                </div>
             </div>
         </div>
 
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
-            <h3 class="text-sm font-bold text-white mb-4">Полное расписание пар</h3>
+            <h3 class="text-sm font-bold text-white mb-4">Расписание пар</h3>
             <div id="schedule-list" class="space-y-3"></div>
         </div>
     </div>
 
-    <!-- Модальное окно отметки (энок) -->
+    <!-- Модальное окно отметки посещаемости -->
     <div id="attendance-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
             <div class="flex justify-between items-center pb-4 border-b border-slate-700">
@@ -95,11 +99,31 @@
         </div>
     </div>
 
+    <!-- Модальное окно статистики и выгрузки в Excel -->
+    <div id="stats-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center pb-4 border-b border-slate-700">
+                <h3 class="font-bold text-lg text-white">Статистика пропусков группы ИСП-О-25</h3>
+                <button onclick="closeStatsModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+
+            <div class="my-4 overflow-y-auto flex-1 pr-2" id="stats-container">
+                <p class="text-sm text-slate-400 text-center py-4">Загрузка статистики...</p>
+            </div>
+
+            <div class="pt-4 border-t border-slate-700 flex justify-between items-center">
+                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded-lg transition font-medium flex items-center gap-2">📥 Скачать отчёт в Excel (CSV)</button>
+                <button onclick="closeStatsModal()" class="px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700 rounded-lg transition">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentUser = null;
         let allStudents = [];
         let scheduleCache = [];
         let activePairId = null;
+        let statsCache = [];
 
         document.getElementById('selected-date').valueAsDate = new Date();
 
@@ -121,6 +145,10 @@
                     document.getElementById('main-app').classList.remove('hidden');
                     document.getElementById('user-badge').innerText = `${currentUser.full_name} (${getRoleName(currentUser.role)})`;
                     
+                    if (currentUser.role === 'admin' || currentUser.role === 'kurator') {
+                        document.getElementById('stats-btn').classList.remove('hidden');
+                    }
+
                     await loadStudents();
                     await loadSchedule();
                 } else {
@@ -132,7 +160,7 @@
         }
 
         function getRoleName(role) {
-            if (role === 'admin') return 'Староста / Админ';
+            if (role === 'admin') return 'Староста / Администратор';
             if (role === 'kurator') return 'Куратор';
             return 'Студент';
         }
@@ -163,12 +191,19 @@
             const container = document.getElementById('schedule-list');
             container.innerHTML = '';
 
-            if (scheduleCache.length === 0) {
-                container.innerHTML = `<p class="text-sm text-slate-400 py-4 text-center">На эту неделю нет пар в базе.</p>`;
+            const selectedDay = document.getElementById('day-select').value;
+            let filtered = scheduleCache;
+
+            if (selectedDay !== 'all') {
+                filtered = scheduleCache.filter(s => s.day_of_week === selectedDay);
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-400 py-4 text-center">На выбранный день нет пар в расписании.</p>`;
                 return;
             }
 
-            scheduleCache.forEach(pair => {
+            filtered.forEach(pair => {
                 const item = document.createElement('div');
                 item.className = "bg-slate-900/60 border border-slate-700/60 rounded-lg p-3.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:border-indigo-500 transition";
                 item.innerHTML = `
@@ -243,6 +278,73 @@
             }
 
             document.getElementById('attendance-modal').classList.remove('hidden');
+        }
+
+        async function openStatsModal() {
+            document.getElementById('stats-modal').classList.remove('hidden');
+            const container = document.getElementById('stats-container');
+            container.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">Загрузка статистики...</p>`;
+
+            try {
+                const res = await fetch('/api/stats');
+                statsCache = await res.json();
+
+                let html = `
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-700 text-xs text-slate-400 uppercase">
+                                <th class="py-2 px-3">ФИО Студента</th>
+                                <th class="py-2 px-3 text-center">Подгруппа</th>
+                                <th class="py-2 px-3 text-center text-rose-400">Н (Неув.)</th>
+                                <th class="py-2 px-3 text-center text-amber-400">Н (Ув.)</th>
+                                <th class="py-2 px-3 text-center font-bold">Всего пропусков</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-700/50 text-sm">
+                `;
+
+                statsCache.forEach(st => {
+                    html += `
+                        <tr class="hover:bg-slate-900/40">
+                            <td class="py-2.5 px-3 font-medium text-slate-200">${st.name}</td>
+                            <td class="py-2.5 px-3 text-center text-slate-400">${st.subgroup}</td>
+                            <td class="py-2.5 px-3 text-center font-bold text-rose-400">${st.invalid_absences || 0}</td>
+                            <td class="py-2.5 px-3 text-center font-bold text-amber-400">${st.valid_absences || 0}</td>
+                            <td class="py-2.5 px-3 text-center font-bold text-indigo-300">${st.total_absences || 0}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            } catch (err) {
+                container.innerHTML = `<p class="text-sm text-rose-400 text-center py-4">Ошибка загрузки статистики</p>`;
+            }
+        }
+
+        function closeStatsModal() {
+            document.getElementById('stats-modal').classList.add('hidden');
+        }
+
+        function exportToExcel() {
+            if (!statsCache || statsCache.length === 0) {
+                alert('Нет данных для выгрузки');
+                return;
+            }
+
+            let csvContent = "\uFEFFФИО Студента;Подгруппа;Н (Неуважительная);Н (Уважительная);Всего пропусков\n";
+            statsCache.forEach(st => {
+                csvContent += `"${st.name}";${st.subgroup};${st.invalid_absences || 0};${st.valid_absences || 0};${st.total_absences || 0}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `isp25_attendance_stats_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
         function closeModal() {
