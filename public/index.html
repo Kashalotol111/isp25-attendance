@@ -3,95 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Модуль учёта посещаемости — ИСП-О-25</title>
+    <title>Учёт посещаемости — ИСП-О-25</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-    </style>
+    <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-    <!-- Окно авторизации -->
+    <!-- Авторизация -->
     <div id="login-modal" class="fixed inset-0 bg-slate-950/90 flex items-center justify-center p-4 z-50">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
             <h2 class="text-xl font-bold mb-1 text-white">Журнал посещаемости</h2>
-            <p class="text-slate-400 text-sm mb-6">Авторизуйтесь для доступа к системе</p>
+            <p class="text-slate-400 text-sm mb-6">Введите персональные учетные данные</p>
             
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Логин</label>
-                    <input type="text" id="username" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                    <input type="text" id="username" required autocomplete="username" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Пароль</label>
-                    <input type="password" id="password" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                    <input type="password" id="password" required autocomplete="current-password" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition text-sm">Войти в систему</button>
             </form>
         </div>
     </div>
 
-    <!-- Основной интерфейс -->
+    <!-- Основное приложение -->
     <div id="main-app" class="hidden max-w-6xl mx-auto p-4 md:p-6 space-y-6">
-        
-        <!-- Шапка -->
         <header class="flex justify-between items-center bg-slate-800 border border-slate-700 p-4 rounded-xl">
             <div>
-                <h1 class="text-lg font-bold text-white">Учёт посещаемости | Группа ИСП-О-25</h1>
+                <h1 class="text-lg font-bold text-white">Группа ИСП-О-25</h1>
                 <p id="user-badge" class="text-xs text-indigo-400 font-medium"></p>
             </div>
             <button onclick="logout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-600 transition">Выйти</button>
         </header>
 
-        <!-- Фильтры и аналитика -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
                 <label class="block text-xs text-slate-400 mb-1">Выберите дату</label>
                 <input type="date" id="selected-date" onchange="loadSchedule()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
             </div>
             <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
-                <label class="block text-xs text-slate-400 mb-1">Поиск студента</label>
-                <input type="text" id="search-input" oninput="filterStudents()" placeholder="Фамилия..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                <label class="block text-xs text-slate-400 mb-1">Поиск по фамилии</label>
+                <input type="text" id="search-input" oninput="filterStudents()" placeholder="Начните ввод..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
             </div>
             <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center justify-between">
                 <div>
-                    <span class="block text-xs text-slate-400">Посещаемость за день</span>
-                    <span id="daily-stat" class="text-xl font-bold text-emerald-400">--%</span>
-                </div>
-                <div class="text-right">
-                    <span class="block text-xs text-slate-400">Пропусков</span>
-                    <span id="daily-absent" class="text-xl font-bold text-rose-400">0</span>
+                    <span class="block text-xs text-slate-400">Статус системы</span>
+                    <span id="system-status" class="text-sm font-bold text-emerald-400">Активна</span>
                 </div>
             </div>
         </div>
 
-        <!-- Сетка Расписания (Пары) -->
-        <div id="schedule-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Динамически заполняются пары -->
-        </div>
+        <div id="schedule-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
     </div>
 
-    <!-- Модалка отметки пары -->
+    <!-- Модальное окно пары -->
     <div id="pair-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
             <div class="flex justify-between items-center pb-4 border-b border-slate-700">
                 <div>
-                    <h3 id="modal-pair-title" class="font-bold text-lg text-white">Пара №</h3>
+                    <h3 id="modal-pair-title" class="font-bold text-lg text-white">Пара</h3>
                     <p id="modal-pair-sub" class="text-xs text-slate-400"></p>
                 </div>
                 <button onclick="closePairModal()" class="text-slate-400 hover:text-white">&times;</button>
             </div>
 
-            <div class="my-4 space-y-2 overflow-y-auto flex-1 pr-2" id="students-list">
-                <!-- Список студентов для отметки -->
-            </div>
+            <div class="my-4 space-y-2 overflow-y-auto flex-1 pr-2" id="students-list"></div>
 
             <div class="pt-4 border-t border-slate-700 flex justify-end gap-3">
-                <button onclick="closePairModal()" class="px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700 rounded-lg transition">Отмена</button>
-                <button id="save-btn" onclick="saveAttendance()" class="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">Сохранить посещаемость</button>
+                <button onclick="closePairModal()" class="px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700 rounded-lg transition">Закрыть</button>
+                <button id="save-btn" onclick="saveAttendance()" class="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">Сохранить</button>
             </div>
         </div>
     </div>
@@ -100,7 +86,6 @@
         let currentUser = null;
         let activePair = null;
 
-        // Данные по умолчанию (Логины/Пароли убраны с экрана!)
         const scheduleData = [
             { pair: 1, time: "08:30 - 10:00", subject: "Разработка модулей ПО" },
             { pair: 2, time: "10:10 - 11:40", subject: "Математическое моделирование" },
@@ -108,11 +93,34 @@
             { pair: 4, time: "13:50 - 15:20", subject: "Физическая культура" }
         ];
 
-        const mockStudents = [
-            { id: 1, name: "Алексеев Дмитрий", subgroup: 1 },
-            { id: 2, name: "Борисов Артём", subgroup: 1 },
-            { id: 3, name: "Васильева Елена", subgroup: 2 },
-            { id: 4, name: "Григорьев Максим", subgroup: 2 }
+        const groupStudents = [
+            { name: "Аббасов", subgroup: 2 },
+            { name: "Абрамов", subgroup: 1 },
+            { name: "Артамонова", subgroup: 1 },
+            { name: "Балаев", subgroup: 2 },
+            { name: "Березин", subgroup: 1 },
+            { name: "Богданов", subgroup: 1 },
+            { name: "Бородина", subgroup: 1 },
+            { name: "Буц", subgroup: 1 },
+            { name: "Величкин", subgroup: 1 },
+            { name: "Галичев", subgroup: 1 },
+            { name: "Голиков", subgroup: 2 },
+            { name: "Дмитриев", subgroup: 1 },
+            { name: "Дмитриева", subgroup: 1 },
+            { name: "Жукова", subgroup: 1 },
+            { name: "Закарая", subgroup: 2 },
+            { name: "Зубаков", subgroup: 1 },
+            { name: "Ильюшенков", subgroup: 2 },
+            { name: "Кочегура", subgroup: 2 },
+            { name: "Ларионов", subgroup: 1 },
+            { name: "Лукичева", subgroup: 2 },
+            { name: "Нажуев", subgroup: 2 },
+            { name: "Ананчук", subgroup: 1 },
+            { name: "Арихипов", subgroup: 1 },
+            { name: "Бикмурзин", subgroup: 2 },
+            { name: "Витько", subgroup: 2 },
+            { name: "Малхасян", subgroup: 2 },
+            { name: "Фаткулина", subgroup: 2 }
         ];
 
         document.getElementById('selected-date').valueAsDate = new Date();
@@ -133,22 +141,21 @@
                 currentUser = data.user;
                 document.getElementById('login-modal').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
-                document.getElementById('user-badge').innerText = `${currentUser.name} (${getRoleName(currentUser.role)})`;
+                document.getElementById('user-badge').innerText = `${currentUser.name} (${getRoleLabel(currentUser.role)})`;
                 loadSchedule();
             } else {
                 alert(data.error);
             }
         }
 
-        function getRoleName(role) {
+        function getRoleLabel(role) {
             if (role === 'starosta') return 'Староста';
             if (role === 'zam_starosty') return 'Зам. старосты';
-            return 'Куратор (Просмотр)';
+            if (role === 'kurator') return 'Куратор';
+            return 'Студент';
         }
 
-        function logout() {
-            location.reload();
-        }
+        function logout() { location.reload(); }
 
         function loadSchedule() {
             const grid = document.getElementById('schedule-grid');
@@ -167,7 +174,7 @@
                         <h4 class="font-medium text-white text-sm mb-4">${item.subject}</h4>
                     </div>
                     <div class="text-xs text-slate-400 border-t border-slate-700/50 pt-2 flex justify-between">
-                        <span>Нажмите для отметки</span>
+                        <span>Просмотр / Отметка</span>
                         <span>&rarr;</span>
                     </div>
                 `;
@@ -183,7 +190,11 @@
             const list = document.getElementById('students-list');
             list.innerHTML = '';
 
-            mockStudents.forEach(st => {
+            const listToRender = (currentUser.role === 'student') 
+                ? groupStudents.filter(s => s.name === currentUser.name)
+                : groupStudents;
+
+            listToRender.forEach(st => {
                 const row = document.createElement('div');
                 row.className = "flex items-center justify-between bg-slate-900/60 p-3 rounded-lg border border-slate-700/50";
                 row.innerHTML = `
@@ -200,8 +211,7 @@
                 list.appendChild(row);
             });
 
-            // Ограничение прав куратора
-            if (currentUser.role === 'kurator') {
+            if (currentUser.role === 'kurator' || currentUser.role === 'student') {
                 document.getElementById('save-btn').classList.add('hidden');
                 document.querySelectorAll('.status-select').forEach(el => el.disabled = true);
             } else {
@@ -211,9 +221,7 @@
             document.getElementById('pair-modal').classList.remove('hidden');
         }
 
-        function closePairModal() {
-            document.getElementById('pair-modal').classList.add('hidden');
-        }
+        function closePairModal() { document.getElementById('pair-modal').classList.add('hidden'); }
 
         async function saveAttendance() {
             const date = document.getElementById('selected-date').value;
@@ -242,7 +250,7 @@
             });
 
             if (res.ok) {
-                alert('Посещаемость успешно сохранена!');
+                alert('Данные сохранены!');
                 closePairModal();
             } else {
                 alert('Ошибка при сохранении.');
