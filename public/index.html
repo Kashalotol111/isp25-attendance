@@ -3,152 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учёт посещаемости — ИСП-О-25</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <title>Учёт посещаемости — ИСП-О-25 (ГГУ)</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-    <!-- Авторизация -->
+    <!-- Форма входа -->
     <div id="login-modal" class="fixed inset-0 bg-slate-950/90 flex items-center justify-center p-4 z-50">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
-            <h2 class="text-xl font-bold mb-1 text-white">Журнал посещаемости</h2>
-            <p class="text-slate-400 text-sm mb-6">Введите персональные учетные данные</p>
+            <h2 class="text-xl font-bold mb-1 text-white">Группа ИСП-О-25</h2>
+            <p class="text-slate-400 text-sm mb-6">Введите персональные данные для входа</p>
             
             <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Логин</label>
-                    <input type="text" id="username" required autocomplete="username" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                    <input type="text" id="login-input" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Пароль</label>
-                    <input type="password" id="password" required autocomplete="current-password" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                    <input type="password" id="password-input" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition text-sm">Войти в систему</button>
             </form>
         </div>
     </div>
 
-    <!-- Основное приложение -->
+    <!-- Основной интерфейс -->
     <div id="main-app" class="hidden max-w-6xl mx-auto p-4 md:p-6 space-y-6">
         <header class="flex justify-between items-center bg-slate-800 border border-slate-700 p-4 rounded-xl">
             <div>
-                <h1 class="text-lg font-bold text-white">Группа ИСП-О-25</h1>
-                <p id="user-badge" class="text-xs text-indigo-400 font-medium"></p>
+                <h1 class="text-lg font-bold text-white">Журнал посещаемости ИСП-О-25</h1>
+                <p id="user-badge" class="text-xs text-indigo-400 font-medium mt-0.5"></p>
             </div>
             <button onclick="logout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-600 transition">Выйти</button>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
-                <label class="block text-xs text-slate-400 mb-1">Выберите дату</label>
-                <input type="date" id="selected-date" onchange="loadSchedule()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
-            </div>
-            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
-                <label class="block text-xs text-slate-400 mb-1">Поиск по фамилии</label>
-                <input type="text" id="search-input" oninput="filterStudents()" placeholder="Начните ввод..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                <label class="block text-xs text-slate-400 mb-1">Выберите дату занятий</label>
+                <input type="date" id="selected-date" onchange="loadSchedule()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
             </div>
             <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center justify-between">
                 <div>
                     <span class="block text-xs text-slate-400">Статус системы</span>
-                    <span id="system-status" class="text-sm font-bold text-emerald-400">Активна</span>
+                    <span class="text-sm font-bold text-emerald-400">Активна (Render)</span>
                 </div>
             </div>
         </div>
 
-        <div id="schedule-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+            <h3 class="text-sm font-bold text-white mb-4">Расписание и пары</h3>
+            <div id="schedule-list" class="space-y-3"></div>
+        </div>
     </div>
 
-    <!-- Модальное окно пары -->
-    <div id="pair-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
+    <!-- Модальное окно отметки посещаемости -->
+    <div id="attendance-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
             <div class="flex justify-between items-center pb-4 border-b border-slate-700">
                 <div>
-                    <h3 id="modal-pair-title" class="font-bold text-lg text-white">Пара</h3>
-                    <p id="modal-pair-sub" class="text-xs text-slate-400"></p>
+                    <h3 id="modal-title" class="font-bold text-lg text-white">Пара</h3>
+                    <p id="modal-subtitle" class="text-xs text-slate-400"></p>
                 </div>
-                <button onclick="closePairModal()" class="text-slate-400 hover:text-white">&times;</button>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
             </div>
 
-            <div class="my-4 space-y-2 overflow-y-auto flex-1 pr-2" id="students-list"></div>
+            <div class="my-3">
+                <input type="text" id="student-search" oninput="filterStudentsList()" placeholder="Поиск студента..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white">
+            </div>
+
+            <div class="my-2 space-y-2 overflow-y-auto flex-1 pr-2" id="modal-students-container"></div>
 
             <div class="pt-4 border-t border-slate-700 flex justify-end gap-3">
-                <button onclick="closePairModal()" class="px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700 rounded-lg transition">Закрыть</button>
-                <button id="save-btn" onclick="saveAttendance()" class="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">Сохранить</button>
+                <button onclick="closeModal()" class="px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700 rounded-lg transition">Закрыть</button>
+                <button id="save-attendance-btn" onclick="saveAttendance()" class="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">Сохранить отметки</button>
             </div>
         </div>
     </div>
 
     <script>
         let currentUser = null;
-        let activePair = null;
-
-        const scheduleData = [
-            { pair: 1, time: "08:30 - 10:00", subject: "Разработка модулей ПО" },
-            { pair: 2, time: "10:10 - 11:40", subject: "Математическое моделирование" },
-            { pair: 3, time: "12:10 - 13:40", subject: "Иностранный язык в проф. сфере" },
-            { pair: 4, time: "13:50 - 15:20", subject: "Физическая культура" }
-        ];
-
-        const groupStudents = [
-            { name: "Аббасов", subgroup: 2 },
-            { name: "Абрамов", subgroup: 1 },
-            { name: "Артамонова", subgroup: 1 },
-            { name: "Балаев", subgroup: 2 },
-            { name: "Березин", subgroup: 1 },
-            { name: "Богданов", subgroup: 1 },
-            { name: "Бородина", subgroup: 1 },
-            { name: "Буц", subgroup: 1 },
-            { name: "Величкин", subgroup: 1 },
-            { name: "Галичев", subgroup: 1 },
-            { name: "Голиков", subgroup: 2 },
-            { name: "Дмитриев", subgroup: 1 },
-            { name: "Дмитриева", subgroup: 1 },
-            { name: "Жукова", subgroup: 1 },
-            { name: "Закарая", subgroup: 2 },
-            { name: "Зубаков", subgroup: 1 },
-            { name: "Ильюшенков", subgroup: 2 },
-            { name: "Кочегура", subgroup: 2 },
-            { name: "Ларионов", subgroup: 1 },
-            { name: "Лукичева", subgroup: 2 },
-            { name: "Нажуев", subgroup: 2 },
-            { name: "Ананчук", subgroup: 1 },
-            { name: "Арихипов", subgroup: 1 },
-            { name: "Бикмурзин", subgroup: 2 },
-            { name: "Витько", subgroup: 2 },
-            { name: "Малхасян", subgroup: 2 },
-            { name: "Фаткулина", subgroup: 2 }
-        ];
+        let allStudents = [];
+        let scheduleCache = [];
+        let activePairId = null;
 
         document.getElementById('selected-date').valueAsDate = new Date();
 
         async function handleLogin(e) {
             e.preventDefault();
-            const u = document.getElementById('username').value;
-            const p = document.getElementById('password').value;
+            const login = document.getElementById('login-input').value.trim();
+            const password = document.getElementById('password-input').value.trim();
 
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: u, password: p })
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                currentUser = data.user;
-                document.getElementById('login-modal').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-                document.getElementById('user-badge').innerText = `${currentUser.name} (${getRoleLabel(currentUser.role)})`;
-                loadSchedule();
-            } else {
-                alert(data.error);
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ login, password })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    currentUser = data;
+                    document.getElementById('login-modal').classList.add('hidden');
+                    document.getElementById('main-app').classList.remove('hidden');
+                    document.getElementById('user-badge').innerText = `${currentUser.full_name} (${getRoleName(currentUser.role)})`;
+                    
+                    await loadStudents();
+                    await loadSchedule();
+                } else {
+                    alert(data.error || 'Ошибка входа');
+                }
+            } catch (err) {
+                alert('Ошибка соединения с сервером');
             }
         }
 
-        function getRoleLabel(role) {
+        function getRoleName(role) {
             if (role === 'starosta') return 'Староста';
             if (role === 'zam_starosty') return 'Зам. старосты';
             if (role === 'kurator') return 'Куратор';
@@ -157,113 +128,180 @@
 
         function logout() { location.reload(); }
 
-        function loadSchedule() {
-            const grid = document.getElementById('schedule-grid');
-            grid.innerHTML = '';
+        async function loadStudents() {
+            try {
+                const res = await fetch('/api/students');
+                allStudents = await res.json();
+            } catch (err) {
+                console.error('Ошибка загрузки студентов', err);
+            }
+        }
 
-            scheduleData.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "bg-slate-800 border border-slate-700 hover:border-indigo-500 rounded-xl p-4 cursor-pointer transition flex flex-col justify-between";
-                card.onclick = () => openPairModal(item);
-                card.innerHTML = `
+        async function loadSchedule() {
+            try {
+                const res = await fetch('/api/schedule');
+                scheduleCache = await res.json();
+                renderSchedule();
+            } catch (err) {
+                console.error('Ошибка загрузки расписания', err);
+            }
+        }
+
+        function renderSchedule() {
+            const container = document.getElementById('schedule-list');
+            container.innerHTML = '';
+
+            const dateVal = document.getElementById('selected-date').value;
+            if (!dateVal) return;
+
+            const dayOfWeek = getDayOfWeekRus(dateVal);
+            // Определяем четность недели (упрощенно по номеру недели года)
+            const d = new Date(dateVal);
+            const startYear = new Date(d.getFullYear(), 0, 1);
+            const weekNumber = Math.ceil((((d - startYear) / 86400000) + startYear.getDay() + 1) / 7);
+            const weekType = weekNumber % 2 === 0 ? 'even' : 'odd';
+
+            const filtered = scheduleCache.filter(s => s.day_of_week === dayOfWeek && (s.week_type === weekType || s.week_type === 'all'));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-400 py-4 text-center">На этот день (${dayOfWeek}) пар по расписанию нет.</p>`;
+                return;
+            }
+
+            filtered.forEach(pair => {
+                const item = document.createElement('div');
+                item.className = "bg-slate-900/60 border border-slate-700/60 rounded-lg p-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:border-indigo-500 transition";
+                item.innerHTML = `
                     <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-xs font-semibold text-indigo-400">Пара №${item.pair}</span>
-                            <span class="text-xs text-slate-500">${item.time}</span>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs font-bold text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded">Пара #${pair.pair_number}</span>
+                            <span class="text-xs text-slate-400">${pair.start_time} - ${pair.end_time}</span>
+                            <span class="text-xs text-slate-500 uppercase">(${pair.type})</span>
                         </div>
-                        <h4 class="font-medium text-white text-sm mb-4">${item.subject}</h4>
+                        <h4 class="font-medium text-white text-sm">${pair.subject}</h4>
+                        <p class="text-xs text-slate-400 mt-0.5">Ауд. ${pair.room || '—'} | Преп. ${pair.teacher || '—'} ${pair.subgroup ? `| Подгруппа ${pair.subgroup}` : ''}</p>
                     </div>
-                    <div class="text-xs text-slate-400 border-t border-slate-700/50 pt-2 flex justify-between">
-                        <span>Просмотр / Отметка</span>
-                        <span>&rarr;</span>
-                    </div>
+                    <button onclick="openAttendanceModal(${pair.id})" class="bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs px-3 py-1.5 rounded-lg transition font-medium">
+                        ${currentUser.role === 'kurator' || currentUser.role === 'student' ? 'Посмотреть журнал' : 'Отметить посещаемость'}
+                    </button>
                 `;
-                grid.appendChild(card);
+                container.appendChild(item);
             });
         }
 
-        function openPairModal(item) {
-            activePair = item;
-            document.getElementById('modal-pair-title').innerText = `Пара №${item.pair}: ${item.subject}`;
-            document.getElementById('modal-pair-sub').innerText = `Время: ${item.time}`;
+        function getDayOfWeekRus(dateString) {
+            const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+            const d = new Date(dateString);
+            return days[d.getDay()];
+        }
 
-            const list = document.getElementById('students-list');
-            list.innerHTML = '';
+        async function openAttendanceModal(scheduleId) {
+            activePairId = scheduleId;
+            const pair = scheduleCache.find(s => s.id === scheduleId);
+            if (!pair) return;
 
-            const listToRender = (currentUser.role === 'student') 
-                ? groupStudents.filter(s => s.name === currentUser.name)
-                : groupStudents;
+            document.getElementById('modal-title').innerText = `Пара №${pair.pair_number}: ${pair.subject}`;
+            document.getElementById('modal-subtitle').innerText = `${pair.start_time} - ${pair.end_time} | Преподаватель: ${pair.teacher || '—'}`;
+
+            const dateVal = document.getElementById('selected-date').value;
+            let absentees = [];
+            try {
+                const res = await fetch(`/api/attendance?date=${dateVal}&schedule_id=${scheduleId}`);
+                absentees = await res.json();
+            } catch (err) {
+                console.error('Ошибка загрузки посещаемости', err);
+            }
+
+            const absentMap = {};
+            absentees.forEach(a => { absentMap[a.student_id] = a.comment || 'н'; });
+
+            const container = document.getElementById('modal-students-container');
+            container.innerHTML = '';
+
+            let listToRender = allStudents;
+            if (currentUser.role === 'student') {
+                listToRender = allStudents.filter(st => st.id === currentUser.id);
+            }
 
             listToRender.forEach(st => {
+                const isAbsent = absentMap[st.id] !== undefined;
+                const comment = isAbsent ? absentMap[st.id] : '';
+
                 const row = document.createElement('div');
-                row.className = "flex items-center justify-between bg-slate-900/60 p-3 rounded-lg border border-slate-700/50";
+                row.className = "student-row flex items-center justify-between bg-slate-900/80 p-2.5 rounded-lg border border-slate-700/50";
                 row.innerHTML = `
                     <div>
                         <span class="text-sm font-medium text-slate-200">${st.name}</span>
-                        <span class="text-xs text-slate-500 block">${st.subgroup}-я подгруппа</span>
+                        <span class="text-xs text-slate-500 ml-2">(${st.subgroup} подгр.)</span>
                     </div>
-                    <select data-student="${st.name}" data-subgroup="${st.subgroup}" class="status-select bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200">
-                        <option value="present">Был(а)</option>
-                        <option value="absent_valid">Н (Уважительная)</option>
-                        <option value="absent_invalid">Н (Неув.)</option>
-                    </select>
+                    <div class="flex items-center gap-2">
+                        <label class="flex items-center gap-1.5 text-xs text-rose-400 cursor-pointer">
+                            <input type="checkbox" data-student-id="${st.id}" class="absent-checkbox rounded bg-slate-800 border-slate-700 text-rose-600 focus:ring-rose-500" ${isAbsent ? 'checked' : ''} ${currentUser.role === 'kurator' || currentUser.role === 'student' ? 'disabled' : ''}>
+                            Отсутствовал(а)
+                        </label>
+                    </div>
                 `;
-                list.appendChild(row);
+                container.appendChild(row);
             });
 
             if (currentUser.role === 'kurator' || currentUser.role === 'student') {
-                document.getElementById('save-btn').classList.add('hidden');
-                document.querySelectorAll('.status-select').forEach(el => el.disabled = true);
+                document.getElementById('save-attendance-btn').classList.add('hidden');
             } else {
-                document.getElementById('save-btn').classList.remove('hidden');
+                document.getElementById('save-attendance-btn').classList.remove('hidden');
             }
 
-            document.getElementById('pair-modal').classList.remove('hidden');
+            document.getElementById('attendance-modal').classList.remove('hidden');
         }
 
-        function closePairModal() { document.getElementById('pair-modal').classList.add('hidden'); }
-
-        async function saveAttendance() {
-            const date = document.getElementById('selected-date').value;
-            const selects = document.querySelectorAll('.status-select');
-            const records = [];
-
-            selects.forEach(s => {
-                records.push({
-                    student_name: s.dataset.student,
-                    subgroup: parseInt(s.dataset.subgroup),
-                    status: s.value
-                });
-            });
-
-            const res = await fetch('/api/attendance', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    date,
-                    pair_number: activePair.pair,
-                    subject: activePair.subject,
-                    records,
-                    userRole: currentUser.role,
-                    username: currentUser.username
-                })
-            });
-
-            if (res.ok) {
-                alert('Данные сохранены!');
-                closePairModal();
-            } else {
-                alert('Ошибка при сохранении.');
-            }
+        function closeModal() {
+            document.getElementById('attendance-modal').classList.add('hidden');
         }
 
-        function filterStudents() {
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const rows = document.querySelectorAll('#students-list > div');
+        function filterStudentsList() {
+            const query = document.getElementById('student-search').value.toLowerCase();
+            const rows = document.querySelectorAll('.student-row');
             rows.forEach(r => {
                 const name = r.querySelector('span').innerText.toLowerCase();
                 r.style.display = name.includes(query) ? 'flex' : 'none';
             });
+        }
+
+        async function saveAttendance() {
+            const dateVal = document.getElementById('selected-date').value;
+            const checkboxes = document.querySelectorAll('.absent-checkbox');
+            const absentees = [];
+
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    absentees.push({
+                        student_id: parseInt(cb.dataset.studentId),
+                        comment: 'н'
+                    });
+                }
+            });
+
+            try {
+                const res = await fetch('/api/attendance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: dateVal,
+                        schedule_id: activePairId,
+                        absentees,
+                        userRole: currentUser.role
+                    })
+                });
+
+                if (res.ok) {
+                    alert('Посещаемость успешно сохранена!');
+                    closeModal();
+                } else {
+                    const data = await res.json();
+                    alert(data.error || 'Ошибка сохранения');
+                }
+            } catch (err) {
+                alert('Ошибка отправки данных на сервер');
+            }
         }
     </script>
 </body>
