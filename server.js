@@ -106,7 +106,7 @@ app.post('/api/attendance', (req, res) => {
 
     db.serialize(() => {
         const stmt = db.prepare(`INSERT OR REPLACE INTO attendance 
-            (date, pair_number, subject, student_name, subgrou    p, status, marked_by) 
+            (date, pair_number, subject, student_name, subgroup, status, marked_by) 
             VALUES (?, ?, ?, ?, ?, ?, ?)`);
 
         records.forEach(r => {
@@ -117,4 +117,4 @@ app.post('/api/attendance', (req, res) => {
     });
 });
 
-app.listen(PORT, () => console.log(
+app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
