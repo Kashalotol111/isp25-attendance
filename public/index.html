@@ -3,532 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учёт посещаемости — ИСП-О-25 (ГГУ)</title>
+    <title>Модуль учёта посещаемости — ИСП-О-25</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
-    <!-- Экран авторизации -->
-    <div id="auth-screen" class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-slate-800 p-8 rounded-2xl border border-slate-700 w-full max-w-md shadow-2xl space-y-6">
-            <div class="text-center">
-                <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-                    Группа ИСП-О-25
-                </h1>
-                <p class="text-xs text-slate-400 mt-1">Система учёта посещаемости • ГГУ</p>
-            </div>
-            <form id="login-form" class="space-y-4">
+    <!-- Окно авторизации -->
+    <div id="login-modal" class="fixed inset-0 bg-slate-950/90 flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h2 class="text-xl font-bold mb-1 text-white">Журнал посещаемости</h2>
+            <p class="text-slate-400 text-sm mb-6">Авторизуйтесь для доступа к системе</p>
+            
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Логин</label>
-                    <input type="text" id="login-input" placeholder="например: tagir.abbasov, kurator или admin" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-indigo-500" required />
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Логин</label>
+                    <input type="text" id="username" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Пароль</label>
-                    <input type="password" id="password-input" placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-indigo-500" required />
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Пароль</label>
+                    <input type="password" id="password" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
                 </div>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition cursor-pointer">
-                    🔑 Войти в систему
-                </button>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition text-sm">Войти в систему</button>
             </form>
-            <div class="text-xs text-slate-400 space-y-1 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
-                <p>👨‍🎓 Студенты: логин вида <code class="text-indigo-400">tagir.abbasov</code> (пароль: <code class="text-indigo-400">isp25-pass</code>)</p>
-                <p>👨‍🏫 Куратор: <code class="text-indigo-400">kurator</code> (пароль: <code class="text-indigo-400">kurator123</code>)</p>
-                <p>🥷 Администратор: <code class="text-indigo-400">admin</code> (пароль: <code class="text-indigo-400">admin123</code>)</p>
-            </div>
         </div>
     </div>
 
-    <!-- Основное приложение -->
-    <div id="app-screen" class="max-w-4xl mx-auto p-4 hidden">
-        <header class="flex flex-col sm:flex-row justify-between items-center mb-6 bg-slate-800 p-4 rounded-xl border border-slate-700 gap-4">
+    <!-- Основной интерфейс -->
+    <div id="main-app" class="hidden max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+        
+        <!-- Шапка -->
+        <header class="flex justify-between items-center bg-slate-800 border border-slate-700 p-4 rounded-xl">
             <div>
-                <h1 id="user-welcome" class="text-xl font-bold text-indigo-300"></h1>
-                <p id="user-subgroup-badge" class="text-xs text-slate-400 mt-0.5"></p>
+                <h1 class="text-lg font-bold text-white">Учёт посещаемости | Группа ИСП-О-25</h1>
+                <p id="user-badge" class="text-xs text-indigo-400 font-medium"></p>
             </div>
-            <div class="flex items-center gap-3 flex-wrap">
-                <button id="admin-toggle-btn" class="hidden px-4 py-2 rounded-lg font-medium transition bg-slate-700 hover:bg-slate-600 text-white text-sm cursor-pointer">
-                    🥷 Панель администратора
-                </button>
-                <button id="logout-btn" class="px-3 py-2 rounded-lg text-rose-400 hover:bg-rose-500/10 text-sm font-medium transition cursor-pointer">
-                    🚪 Выйти
-                </button>
-            </div>
+            <button onclick="logout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-600 transition">Выйти</button>
         </header>
 
-        <!-- Кабинет студента / куратора -->
-        <div id="view-student" class="space-y-6">
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <h2 class="text-lg font-semibold">📅 Расписание занятий (по дням)</h2>
-                    <!-- Переключатель недель -->
-                    <div class="flex bg-slate-900 p-1 rounded-lg border border-slate-700 text-xs">
-                        <button onclick="setWeekFilter('all')" id="wf-all" class="px-3 py-1.5 rounded-md font-medium transition bg-indigo-600 text-white cursor-pointer">Все</button>
-                        <button onclick="setWeekFilter('odd')" id="wf-odd" class="px-3 py-1.5 rounded-md font-medium transition text-slate-400 hover:text-white cursor-pointer">Нечётная неделя</button>
-                        <button onclick="setWeekFilter('even')" id="wf-even" class="px-3 py-1.5 rounded-md font-medium transition text-slate-400 hover:text-white cursor-pointer">Чётная неделя</button>
-                    </div>
-                </div>
-                <!-- Контейнер дней недели в столбик -->
-                <div id="student-schedule" class="space-y-4"></div>
+        <!-- Фильтры и аналитика -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                <label class="block text-xs text-slate-400 mb-1">Выберите дату</label>
+                <input type="date" id="selected-date" onchange="loadSchedule()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
             </div>
-
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-semibold">📊 Статистика посещаемости группы</h2>
-                    <button id="curator-pdf-btn" class="hidden bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer">📥 Скачать PDF-отчёт</button>
+            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl">
+                <label class="block text-xs text-slate-400 mb-1">Поиск студента</label>
+                <input type="text" id="search-input" oninput="filterStudents()" placeholder="Фамилия..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+            </div>
+            <div class="bg-slate-800 border border-slate-700 p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <span class="block text-xs text-slate-400">Посещаемость за день</span>
+                    <span id="daily-stat" class="text-xl font-bold text-emerald-400">--%</span>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-slate-900/50 text-slate-400 uppercase text-xs">
-                            <tr>
-                                <th class="p-3">Студент</th>
-                                <th class="p-3 text-center">Подгр.</th>
-                                <th class="p-3 text-center">Лекции</th>
-                                <th class="p-3 text-center">Практики</th>
-                                <th class="p-3 text-center">Всего</th>
-                            </tr>
-                        </thead>
-                        <tbody id="student-stats-table" class="divide-y divide-slate-700/50"></tbody>
-                    </table>
+                <div class="text-right">
+                    <span class="block text-xs text-slate-400">Пропусков</span>
+                    <span id="daily-absent" class="text-xl font-bold text-rose-400">0</span>
                 </div>
             </div>
         </div>
 
-        <!-- Админ-панель -->
-        <div id="view-admin" class="space-y-4 hidden">
-            <div class="flex gap-2 border-b border-slate-700 pb-2 flex-wrap">
-                <button id="tab-btn-mark" class="px-3 py-1.5 text-sm rounded-md bg-slate-700 text-white cursor-pointer">📝 Отметка посещаемости</button>
-                <button id="tab-btn-schedule" class="px-3 py-1.5 text-sm rounded-md text-slate-400 cursor-pointer">⚙️ Управление расписанием</button>
-                <button id="tab-btn-stats" class="px-3 py-1.5 text-sm rounded-md text-slate-400 cursor-pointer">📄 Отчёт PDF</button>
+        <!-- Сетка Расписания (Пары) -->
+        <div id="schedule-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Динамически заполняются пары -->
+        </div>
+    </div>
+
+    <!-- Модалка отметки пары -->
+    <div id="pair-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center pb-4 border-b border-slate-700">
+                <div>
+                    <h3 id="modal-pair-title" class="font-bold text-lg text-white">Пара №</h3>
+                    <p id="modal-pair-sub" class="text-xs text-slate-400"></p>
+                </div>
+                <button onclick="closePairModal()" class="text-slate-400 hover:text-white">&times;</button>
             </div>
 
-            <!-- Вкладка: Отметка -->
-            <div id="admin-tab-mark" class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4">
-                <div class="grid sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Дата</label>
-                        <input type="date" id="mark-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white" />
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Пара</label>
-                        <select id="mark-pair" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-white"></select>
-                    </div>
-                </div>
-                <div class="border-t border-slate-700 pt-4">
-                    <h3 class="text-sm font-semibold mb-3">Отметьте отсутствующих:</h3>
-                    <div id="students-mark-list" class="space-y-2"></div>
-                    <button id="save-attendance-btn" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-lg font-bold transition cursor-pointer">💾 Сохранить посещаемость</button>
-                </div>
+            <div class="my-4 space-y-2 overflow-y-auto flex-1 pr-2" id="students-list">
+                <!-- Список студентов для отметки -->
             </div>
 
-            <!-- Вкладка: Расписание -->
-            <div id="admin-tab-schedule" class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4 hidden">
-                <h3 class="text-md font-semibold">Добавить занятие в расписание</h3>
-                <form id="schedule-form" class="grid sm:grid-cols-3 gap-3">
-                    <select name="week_type" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white">
-                        <option value="all">Каждая неделя</option>
-                        <option value="odd">Нечётная неделя</option>
-                        <option value="even">Четная неделя</option>
-                    </select>
-                    <select name="day_of_week" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white" required>
-                        <option value="Понедельник">Понедельник</option>
-                        <option value="Вторник">Вторник</option>
-                        <option value="Среда">Среда</option>
-                        <option value="Четверг">Четверг</option>
-                        <option value="Пятница">Пятница</option>
-                        <option value="Суббота">Суббота</option>
-                    </select>
-                    <select name="pair_number" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white" required>
-                        <option value="1">Пара 1 (8:45)</option>
-                        <option value="2">Пара 2 (10:25)</option>
-                        <option value="3">Пара 3 (12:05)</option>
-                        <option value="4">Пара 4 (14:30)</option>
-                        <option value="5">Пара 5 (16:10)</option>
-                        <option value="6">Пара 6 (17:50)</option>
-                    </select>
-                    <select name="type" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white" required>
-                        <option value="лекция">Лекция</option>
-                        <option value="практика">Практика</option>
-                    </select>
-                    <select name="subgroup" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white">
-                        <option value="">Вся группа</option>
-                        <option value="1">1 подгруппа</option>
-                        <option value="2">2 подгруппа</option>
-                    </select>
-                    <input type="text" name="subject" placeholder="Название предмета" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white sm:col-span-2" required />
-                    <input type="time" name="start_time" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white" required />
-                    <input type="time" name="end_time" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white" required />
-                    <input type="text" name="room" placeholder="Аудитория (напр. 302)" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white" />
-                    <input type="text" name="teacher" placeholder="Преподаватель" class="bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white sm:col-span-2" />
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded p-2 text-sm sm:col-span-3 cursor-pointer">+ Добавить занятие</button>
-                </form>
-            </div>
-
-            <!-- Вкладка: Отчёт PDF -->
-            <div id="admin-tab-stats" class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4 hidden">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-md font-semibold">Итоговый отчёт по группе</h3>
-                    <button id="export-pdf-btn" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition cursor-pointer">📥 Скачать PDF</button>
-                </div>
-                <div id="pdf-report" class="bg-white text-slate-900 p-6 rounded-lg">
-                    <div class="text-center mb-4">
-                        <h2 class="text-xl font-bold">ОТЧЁТ ПО ПОСЕЩАЕМОСТИ</h2>
-                        <p class="text-sm">Группа: ИСП-О-25 | Гжельский государственный университет</p>
-                    </div>
-                    <table class="w-full text-left border-collapse text-xs">
-                        <thead>
-                            <tr class="border-b-2 border-slate-800">
-                                <th class="py-2">ФИО Студента</th>
-                                <th class="py-2 text-center">Подгр.</th>
-                                <th class="py-2 text-center">Лекции</th>
-                                <th class="py-2 text-center">Практики</th>
-                                <th class="py-2 text-center">Всего</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pdf-table-body"></tbody>
-                    </table>
-                </div>
+            <div class="pt-4 border-t border-slate-700 flex justify-end gap-3">
+                <button onclick="closePairModal()" class="px-4 py-2 text-xs font-medium text-slate-300 hover:bg-slate-700 rounded-lg transition">Отмена</button>
+                <button id="save-btn" onclick="saveAttendance()" class="px-4 py-2 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition">Сохранить посещаемость</button>
             </div>
         </div>
     </div>
 
     <script>
         let currentUser = null;
-        let students = [];
-        let schedule = [];
-        let stats = [];
-        let currentWeekFilter = 'all';
+        let activePair = null;
 
-        document.getElementById('mark-date').valueAsDate = new Date();
+        // Данные по умолчанию (Логины/Пароли убраны с экрана!)
+        const scheduleData = [
+            { pair: 1, time: "08:30 - 10:00", subject: "Разработка модулей ПО" },
+            { pair: 2, time: "10:10 - 11:40", subject: "Математическое моделирование" },
+            { pair: 3, time: "12:10 - 13:40", subject: "Иностранный язык в проф. сфере" },
+            { pair: 4, time: "13:50 - 15:20", subject: "Физическая культура" }
+        ];
 
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
+        const mockStudents = [
+            { id: 1, name: "Алексеев Дмитрий", subgroup: 1 },
+            { id: 2, name: "Борисов Артём", subgroup: 1 },
+            { id: 3, name: "Васильева Елена", subgroup: 2 },
+            { id: 4, name: "Григорьев Максим", subgroup: 2 }
+        ];
+
+        document.getElementById('selected-date').valueAsDate = new Date();
+
+        async function handleLogin(e) {
             e.preventDefault();
-            const login = document.getElementById('login-input').value.trim();
-            const password = document.getElementById('password-input').value.trim();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
 
-            try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ login, password })
-                });
-                const data = await res.json();
-                if (!res.ok) {
-                    alert(data.error || 'Ошибка входа');
-                    return;
-                }
-                currentUser = data;
-                localStorage.setItem('isp25_user', JSON.stringify(currentUser));
-                initApp();
-            } catch (err) {
-                console.error(err);
-                alert('Ошибка соединения с сервером');
-            }
-        });
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            });
 
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            localStorage.removeItem('isp25_user');
-            currentUser = null;
-            document.getElementById('auth-screen').classList.remove('hidden');
-            document.getElementById('app-screen').classList.add('hidden');
-        });
-
-        const saved = localStorage.getItem('isp25_user');
-        if (saved) {
-            currentUser = JSON.parse(saved);
-            initApp();
-        }
-
-        async function initApp() {
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('app-screen').classList.remove('hidden');
-
-            if (currentUser.role === 'admin') {
-                document.getElementById('user-welcome').innerText = `👋 Администратор: ${currentUser.full_name}`;
-                document.getElementById('user-subgroup-badge').innerText = 'Полный доступ к управлению';
-                document.getElementById('admin-toggle-btn').classList.remove('hidden');
-                document.getElementById('admin-toggle-btn').addEventListener('click', toggleAdminMode);
-            } else if (currentUser.role === 'kurator') {
-                document.getElementById('user-welcome').innerText = `👨‍🏫 Куратор группы: ${currentUser.full_name}`;
-                document.getElementById('user-subgroup-badge').innerText = 'Просмотр посещаемости и отчётности ИСП-О-25';
-                document.getElementById('curator-pdf-btn').classList.remove('hidden');
-                document.getElementById('curator-pdf-btn').addEventListener('click', exportPDF);
+            const data = await res.json();
+            if (res.ok) {
+                currentUser = data.user;
+                document.getElementById('login-modal').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                document.getElementById('user-badge').innerText = `${currentUser.name} (${getRoleName(currentUser.role)})`;
+                loadSchedule();
             } else {
-                document.getElementById('user-welcome').innerText = `👋 С возвращением, ${currentUser.full_name}!`;
-                document.getElementById('user-subgroup-badge').innerText = `Студент • ${currentUser.subgroup} подгруппа`;
-            }
-
-            await loadData();
-        }
-
-        let isAdminView = false;
-        function toggleAdminMode() {
-            isAdminView = !isAdminView;
-            const studentView = document.getElementById('view-student');
-            const adminView = document.getElementById('view-admin');
-            const btn = document.getElementById('admin-toggle-btn');
-
-            if (isAdminView) {
-                studentView.classList.add('hidden');
-                adminView.classList.remove('hidden');
-                btn.innerText = '🎓 К общему виду';
-                btn.className = 'px-4 py-2 rounded-lg font-medium transition bg-indigo-600 text-white text-sm cursor-pointer';
-            } else {
-                studentView.classList.remove('hidden');
-                adminView.classList.add('hidden');
-                btn.innerText = '🥷 Панель администратора';
-                btn.className = 'px-4 py-2 rounded-lg font-medium transition bg-slate-700 hover:bg-slate-600 text-white text-sm cursor-pointer';
+                alert(data.error);
             }
         }
 
-        function setWeekFilter(type) {
-            currentWeekFilter = type;
-            ['all', 'odd', 'even'].forEach(t => {
-                const btn = document.getElementById(`wf-${t}`);
-                if (t === type) {
-                    btn.className = 'px-3 py-1.5 rounded-md font-medium transition bg-indigo-600 text-white cursor-pointer';
-                } else {
-                    btn.className = 'px-3 py-1.5 rounded-md font-medium transition text-slate-400 hover:text-white cursor-pointer';
-                }
-            });
-            renderStudentView();
+        function getRoleName(role) {
+            if (role === 'starosta') return 'Староста';
+            if (role === 'zam_starosty') return 'Зам. старосты';
+            return 'Куратор (Просмотр)';
         }
 
-        async function loadData() {
-            try {
-                const [stRes, schRes, statRes] = await Promise.all([
-                    fetch('/api/students').then(r => r.json()),
-                    fetch('/api/schedule').then(r => r.json()),
-                    fetch('/api/stats').then(r => r.json())
-                ]);
-                students = stRes;
-                schedule = schRes;
-                stats = statRes;
-
-                renderStudentView();
-                renderAdminMarkUI();
-            } catch (e) {
-                console.error('Ошибка загрузки:', e);
-            }
+        function logout() {
+            location.reload();
         }
 
-        function renderStudentView() {
-            const schContainer = document.getElementById('student-schedule');
-            
-            // Фильтрация по подгруппе и типу недели
-            const filteredSch = schedule.filter(s => {
-                if (currentUser.role === 'student' && s.subgroup && s.subgroup !== currentUser.subgroup) {
-                    return false;
-                }
-                if (currentWeekFilter !== 'all' && s.week_type !== 'all' && s.week_type !== currentWeekFilter) {
-                    return false;
-                }
-                return true;
-            });
+        function loadSchedule() {
+            const grid = document.getElementById('schedule-grid');
+            grid.innerHTML = '';
 
-            const daysOrder = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-            
-            // Группируем по дням недели
-            const daysMap = {};
-            daysOrder.forEach(d => { daysMap[d] = []; });
-            filteredSch.forEach(s => {
-                if (daysMap[s.day_of_week]) {
-                    daysMap[s.day_of_week].push(s);
-                }
-            });
-
-            let html = '';
-            daysOrder.forEach(day => {
-                const items = daysMap[day];
-                html += `
-                    <div class="bg-slate-900/80 rounded-xl border border-slate-700/80 p-4 space-y-3">
-                        <div class="flex items-center justify-between border-b border-slate-700/50 pb-2">
-                            <h3 class="font-bold text-indigo-400 text-base">${day}</h3>
-                            <span class="text-xs text-slate-400">${items.length > 0 ? `${items.length} зан.` : 'Выходной'}</span>
+            scheduleData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-800 border border-slate-700 hover:border-indigo-500 rounded-xl p-4 cursor-pointer transition flex flex-col justify-between";
+                card.onclick = () => openPairModal(item);
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-semibold text-indigo-400">Пара №${item.pair}</span>
+                            <span class="text-xs text-slate-500">${item.time}</span>
                         </div>
-                `;
-
-                if (items.length === 0) {
-                    html += `<div class="text-xs text-slate-500 italic py-1">🌙 Выходной / Самоподготовка</div>`;
-                } else {
-                    html += `<div class="space-y-2">`;
-                    items.sort((a, b) => a.pair_number - b.pair_number).forEach(s => {
-                        html += `
-                            <div class="bg-slate-800/90 p-3 rounded-lg border border-slate-700/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                <div class="space-y-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="bg-indigo-500/20 text-indigo-300 text-xs font-bold px-2 py-0.5 rounded">Пара ${s.pair_number}</span>
-                                        <span class="text-xs text-slate-400">⏰ ${s.start_time} - ${s.end_time}</span>
-                                        <span class="text-xs px-2 py-0.5 rounded font-medium ${s.type === 'лекция' ? 'bg-blue-500/20 text-blue-300' : 'bg-emerald-500/20 text-emerald-300'}">${s.type} ${s.subgroup ? `(подгр. ${s.subgroup})` : ''}</span>
-                                    </div>
-                                    <div class="font-bold text-sm text-slate-100">${s.subject}</div>
-                                </div>
-                                <div class="text-xs text-slate-400 text-right">
-                                    <div>🚪 ауд. ${s.room || '—'}</div>
-                                    <div class="text-slate-500">👨‍🏫 ${s.teacher || '—'}</div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    html += `</div>`;
-                }
-                html += `</div>`;
-            });
-
-            schContainer.innerHTML = html;
-
-            const statsTable = document.getElementById('student-stats-table');
-            const pdfTable = document.getElementById('pdf-table-body');
-            const rowsHTML = stats.map(st => `
-                <tr class="hover:bg-slate-700/30 border-b border-slate-700/30">
-                    <td class="p-3 font-medium">${st.name}</td>
-                    <td class="p-3 text-center text-slate-400">${st.subgroup}</td>
-                    <td class="p-3 text-center text-blue-400">${st.lecture_absences || 0}</td>
-                    <td class="p-3 text-center text-emerald-400">${st.practice_absences || 0}</td>
-                    <td class="p-3 text-center font-bold text-rose-400">${st.total_absences || 0}</td>
-                </tr>
-            `).join('');
-            statsTable.innerHTML = rowsHTML;
-            pdfTable.innerHTML = stats.map(st => `
-                <tr class="border-b border-slate-200">
-                    <td class="py-2 font-medium">${st.name}</td>
-                    <td class="py-2 text-center">${st.subgroup}</td>
-                    <td class="py-2 text-center">${st.lecture_absences || 0}</td>
-                    <td class="py-2 text-center">${st.practice_absences || 0}</td>
-                    <td class="py-2 text-center font-bold">${st.total_absences || 0}</td>
-                </tr>
-            `).join('');
-        }
-
-        function renderAdminMarkUI() {
-            const select = document.getElementById('mark-pair');
-            if (schedule.length === 0) {
-                select.innerHTML = '<option value="">Сначала добавьте расписание</option>';
-                document.getElementById('students-mark-list').innerHTML = '<p class="text-xs text-slate-400">Нет доступных пар.</p>';
-                return;
-            }
-            select.innerHTML = schedule.map(s => `
-                <option value="${s.id}">[${s.week_type === 'odd' ? 'Неч' : s.week_type === 'even' ? 'Чет' : 'Все'}] ${s.day_of_week} (Пара ${s.pair_number}, ${s.start_time}) — ${s.subject} [${s.type}${s.subgroup ? `, подгр. ${s.subgroup}` : ''}]</option>
-            `).join('');
-            loadAttendanceForPair();
-        }
-
-        async function loadAttendanceForPair() {
-            const date = document.getElementById('mark-date').value;
-            const pairId = document.getElementById('mark-pair').value;
-            if (!date || !pairId) return;
-
-            const selectedPairObj = schedule.find(s => s.id == pairId);
-
-            const res = await fetch(`/api/attendance?date=${date}&schedule_id=${pairId}`);
-            const absList = await res.json();
-            const absMap = {};
-            absList.forEach(item => { absMap[item.student_id] = item.comment || ''; });
-
-            const relevantStudents = students.filter(st => {
-                if (!selectedPairObj || !selectedPairObj.subgroup) return true;
-                return st.subgroup === selectedPairObj.subgroup;
-            });
-
-            const listContainer = document.getElementById('students-mark-list');
-            listContainer.innerHTML = relevantStudents.map(st => {
-                const isAbsent = absMap.hasOwnProperty(st.id);
-                return `
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg border transition gap-2 ${isAbsent ? 'bg-rose-950/30 border-rose-800/50' : 'bg-slate-900/40 border-slate-700/40'}">
-                        <label class="flex items-center gap-3 cursor-pointer">
-                            <input type="checkbox" data-student-id="${st.id}" ${isAbsent ? 'checked' : ''} onchange="toggleAbsent(this)" class="w-4 h-4 accent-rose-500 rounded cursor-pointer" />
-                            <span class="font-medium ${isAbsent ? 'text-rose-300' : 'text-slate-200'}">${st.name} <span class="text-xs text-slate-500">(${st.subgroup} подгр.)</span></span>
-                        </label>
-                        <input type="text" data-comment-id="${st.id}" placeholder="Причина..." value="${absMap[st.id] || ''}" ${!isAbsent ? 'disabled style="opacity:0.4"' : ''} class="bg-slate-900 border border-slate-700 rounded px-3 py-1 text-xs w-full sm:w-64 text-white" />
+                        <h4 class="font-medium text-white text-sm mb-4">${item.subject}</h4>
+                    </div>
+                    <div class="text-xs text-slate-400 border-t border-slate-700/50 pt-2 flex justify-between">
+                        <span>Нажмите для отметки</span>
+                        <span>&rarr;</span>
                     </div>
                 `;
-            }).join('');
+                grid.appendChild(card);
+            });
         }
 
-        window.toggleAbsent = function(checkbox) {
-            const id = checkbox.getAttribute('data-student-id');
-            const input = document.querySelector(`input[data-comment-id="${id}"]`);
-            const parent = checkbox.closest('div.flex');
-            if (checkbox.checked) {
-                input.disabled = false;
-                input.style.opacity = '1';
-                parent.className = "flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg border transition gap-2 bg-rose-950/30 border-rose-800/50";
+        function openPairModal(item) {
+            activePair = item;
+            document.getElementById('modal-pair-title').innerText = `Пара №${item.pair}: ${item.subject}`;
+            document.getElementById('modal-pair-sub').innerText = `Время: ${item.time}`;
+
+            const list = document.getElementById('students-list');
+            list.innerHTML = '';
+
+            mockStudents.forEach(st => {
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between bg-slate-900/60 p-3 rounded-lg border border-slate-700/50";
+                row.innerHTML = `
+                    <div>
+                        <span class="text-sm font-medium text-slate-200">${st.name}</span>
+                        <span class="text-xs text-slate-500 block">${st.subgroup}-я подгруппа</span>
+                    </div>
+                    <select data-student="${st.name}" data-subgroup="${st.subgroup}" class="status-select bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200">
+                        <option value="present">Был(а)</option>
+                        <option value="absent_valid">Н (Уважительная)</option>
+                        <option value="absent_invalid">Н (Неув.)</option>
+                    </select>
+                `;
+                list.appendChild(row);
+            });
+
+            // Ограничение прав куратора
+            if (currentUser.role === 'kurator') {
+                document.getElementById('save-btn').classList.add('hidden');
+                document.querySelectorAll('.status-select').forEach(el => el.disabled = true);
             } else {
-                input.disabled = true;
-                input.style.opacity = '0.4';
-                input.value = '';
-                parent.className = "flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg border transition gap-2 bg-slate-900/40 border-slate-700/40";
+                document.getElementById('save-btn').classList.remove('hidden');
             }
-        };
+
+            document.getElementById('pair-modal').classList.remove('hidden');
+        }
+
+        function closePairModal() {
+            document.getElementById('pair-modal').classList.add('hidden');
+        }
 
         async function saveAttendance() {
-            const date = document.getElementById('mark-date').value;
-            const schedule_id = document.getElementById('mark-pair').value;
-            if (!schedule_id) {
-                alert('Выберите пару!');
-                return;
+            const date = document.getElementById('selected-date').value;
+            const selects = document.querySelectorAll('.status-select');
+            const records = [];
+
+            selects.forEach(s => {
+                records.push({
+                    student_name: s.dataset.student,
+                    subgroup: parseInt(s.dataset.subgroup),
+                    status: s.value
+                });
+            });
+
+            const res = await fetch('/api/attendance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date,
+                    pair_number: activePair.pair,
+                    subject: activePair.subject,
+                    records,
+                    userRole: currentUser.role,
+                    username: currentUser.username
+                })
+            });
+
+            if (res.ok) {
+                alert('Посещаемость успешно сохранена!');
+                closePairModal();
+            } else {
+                alert('Ошибка при сохранении.');
             }
-            const checkboxes = document.querySelectorAll('input[data-student-id]');
-            
-            const absentees = [];
-            checkboxes.forEach(cb => {
-                if (cb.checked) {
-                    const student_id = parseInt(cb.getAttribute('data-student-id'));
-                    const comment = document.querySelector(`input[data-comment-id="${student_id}"]`).value;
-                    absentees.push({ student_id, comment });
-                }
-            });
-
-            await fetch('/api/attendance', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ date, schedule_id, absentees })
-            });
-            alert('Посещаемость успешно сохранена!');
-            loadData();
         }
 
-        async function exportPDF() {
-            const element = document.getElementById('pdf-report');
-            html2pdf().set({
-                margin: 0.5,
-                filename: 'Отчет_Посещаемость_ИСП-О-25.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            }).from(element).save();
-        }
-
-        document.getElementById('tab-btn-mark').addEventListener('click', () => switchAdminTab('mark'));
-        document.getElementById('tab-btn-schedule').addEventListener('click', () => switchAdminTab('schedule'));
-        document.getElementById('tab-btn-stats').addEventListener('click', () => switchAdminTab('stats'));
-
-        function switchAdminTab(tab) {
-            ['mark', 'schedule', 'stats'].forEach(t => {
-                document.getElementById(`admin-tab-${t}`).classList.add('hidden');
-                document.getElementById(`tab-btn-${t}`).className = 'px-3 py-1.5 text-sm rounded-md text-slate-400 cursor-pointer';
+        function filterStudents() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const rows = document.querySelectorAll('#students-list > div');
+            rows.forEach(r => {
+                const name = r.querySelector('span').innerText.toLowerCase();
+                r.style.display = name.includes(query) ? 'flex' : 'none';
             });
-            document.getElementById(`admin-tab-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-btn-${tab}`).className = 'px-3 py-1.5 text-sm rounded-md bg-slate-700 text-white cursor-pointer';
         }
-
-        document.getElementById('schedule-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            await fetch('/api/schedule', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(Object.fromEntries(formData.entries()))
-            });
-            e.target.reset();
-            loadData();
-            alert('Занятие успешно добавлено в расписание!');
-        });
-
-        document.getElementById('save-attendance-btn').addEventListener('click', saveAttendance);
-        document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
-        document.getElementById('mark-date').addEventListener('change', loadAttendanceForPair);
-        document.getElementById('mark-pair').addEventListener('change', loadAttendanceForPair);
     </script>
 </body>
 </html>
