@@ -295,7 +295,8 @@
             const pair = scheduleCache.find(s => s.id === scheduleId);
             if (!pair) return;
 
-            document.getElementById('modal-title').innerText = `${pair.day_of_week} — Пара №${pair.pair_number}: ${pair.subject}`;
+            let subTitle = pair.subgroup ? ` (Подгруппа ${pair.subgroup})` : ' (Вся группа)';
+            document.getElementById('modal-title').innerText = `${pair.day_of_week} — Пара №${pair.pair_number}: ${pair.subject}${subTitle}`;
             document.getElementById('modal-subtitle').innerText = `${pair.start_time} - ${pair.end_time} | Преподаватель: ${pair.teacher || '—'}`;
 
             if (currentUser.role === 'student') {
@@ -320,8 +321,12 @@
             container.innerHTML = '';
 
             let listToRender = allStudents;
+
             if (currentUser.role === 'student') {
                 listToRender = allStudents.filter(st => st.id === currentUser.id);
+            } else if (pair.subgroup) {
+                // Если у пары указана подгруппа (1 или 2), показываем ТОЛЬКО студентов этой подгруппы
+                listToRender = allStudents.filter(st => st.subgroup === pair.subgroup);
             }
 
             listToRender.forEach(st => {
