@@ -226,12 +226,10 @@
             const selectedDay = document.getElementById('day-select').value;
             let filtered = scheduleCache;
 
-            // 1. Фильтрация по подгруппе пользователя
             if (currentUser.role === 'student' && currentUser.subgroup) {
                 filtered = filtered.filter(pair => pair.subgroup === null || pair.subgroup === currentUser.subgroup);
             }
 
-            // 2. Фильтрация по выбранному дню недели
             if (selectedDay !== 'all') {
                 filtered = filtered.filter(pair => pair.day_of_week === selectedDay);
             }
@@ -241,7 +239,6 @@
                 return;
             }
 
-            // Группировка пар по дням недели для создания рамок (как на скриншоте)
             const daysOrder = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
             const grouped = {};
 
@@ -253,7 +250,6 @@
             daysOrder.forEach(dayName => {
                 if (!grouped[dayName] || grouped[dayName].length === 0) return;
 
-                // Блок рамка для каждого дня недели
                 const dayCard = document.createElement('div');
                 dayCard.className = "bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-lg space-y-3";
 
@@ -339,7 +335,7 @@
                         <span class="text-xs text-slate-500 ml-2">(${st.subgroup} подгр.)</span>
                     </div>
                     <select data-student-id="${st.id}" class="status-select bg-slate-800 border border-slate-700 text-xs rounded px-2 py-1.5 text-slate-200 focus:outline-none focus:border-indigo-500" ${currentUser.role === 'kurator' || currentUser.role === 'student' ? 'disabled' : ''}>
-                        <option value="present" ${status === 'present' ? 'selected' : ''}>Был(а)</option>
+                        <option value="present" ${status === 'present' ? 'selected' : ''}>Был(а) / Снять Н</option>
                         <option value="absent_invalid" ${status === 'absent_invalid' ? 'selected' : ''}>Н (Неуважительная)</option>
                         <option value="absent_valid" ${status === 'absent_valid' ? 'selected' : ''}>Н (Уважительная)</option>
                     </select>
