@@ -70,9 +70,12 @@
             </div>
         </div>
 
-        <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
-            <h3 class="text-sm font-bold text-white mb-4">Расписание пар</h3>
-            <div id="schedule-list" class="space-y-3"></div>
+        <div class="space-y-6">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <span>📚 Расписание пар</span>
+                <span id="subgroup-indicator" class="text-xs font-normal text-slate-400"></span>
+            </h3>
+            <div id="schedule-list" class="space-y-6"></div>
         </div>
     </div>
 
@@ -87,7 +90,6 @@
                 <button onclick="closeModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
             </div>
 
-            <!-- Строка поиска скрывается для студентов -->
             <div id="search-container" class="my-3">
                 <input type="text" id="student-search" oninput="filterStudentsList()" placeholder="Поиск студента по фамилии..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
             </div>
@@ -101,7 +103,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно статистики старосты/куратора -->
+    <!-- Модальное окно общей статистики -->
     <div id="stats-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
             <div class="flex justify-between items-center pb-4 border-b border-slate-700">
@@ -116,7 +118,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно личной статистики студента за месяц -->
+    <!-- Модальное окно личной статистики студента -->
     <div id="student-stats-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
             <div class="flex justify-between items-center pb-4 border-b border-slate-700">
@@ -165,8 +167,14 @@
                     currentUser = data;
                     document.getElementById('login-modal').classList.add('hidden');
                     document.getElementById('main-app').classList.remove('hidden');
-                    document.getElementById('user-badge').innerText = `${currentUser.full_name} (${getRoleName(currentUser.role)})`;
                     
+                    let subText = currentUser.subgroup ? ` (Подгруппа ${currentUser.subgroup})` : '';
+                    document.getElementById('user-badge').innerText = `${currentUser.full_name} (${getRoleName(currentUser.role)})${subText}`;
+                    
+                    if (currentUser.role === 'student' && currentUser.subgroup) {
+                        document.getElementById('subgroup-indicator').innerText = `• Отображение пар для подгруппы ${currentUser.subgroup}`;
+                    }
+
                     if (currentUser.role === 'admin' || currentUser.role === 'kurator') {
                         document.getElementById('stats-btn').classList.remove('hidden');
                     } else {
@@ -218,33 +226,71 @@
             const selectedDay = document.getElementById('day-select').value;
             let filtered = scheduleCache;
 
+            // 1. Фильтрация по подгруппе пользователя
+            if (currentUser.role === 'student' && currentUser.subgroup) {
+                filtered = filtered.filter(pair => pair.subgroup === null || pair.subgroup === currentUser.subgroup);
+            }
+
+            // 2. Фильтрация по выбранному дню недели
             if (selectedDay !== 'all') {
-                filtered = scheduleCache.filter(s => s.day_of_week === selectedDay);
+                filtered = filtered.filter(pair => pair.day_of_week === selectedDay);
             }
 
             if (filtered.length === 0) {
-                container.innerHTML = `<p class="text-sm text-slate-400 py-4 text-center">На выбранный день нет пар в расписании.</p>`;
+                container.innerHTML = `<p class="text-sm text-slate-400 py-6 text-center bg-slate-800 border border-slate-700 rounded-xl">На выбранный день пар для вас не найдено.</p>`;
                 return;
             }
 
+            // Группировка пар по дням недели для создания рамок (как на скриншоте)
+            const daysOrder = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+            const grouped = {};
+
             filtered.forEach(pair => {
-                const item = document.createElement('div');
-                item.className = "bg-slate-900/60 border border-slate-700/60 rounded-lg p-3.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:border-indigo-500 transition";
-                item.innerHTML = `
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-xs font-bold text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded">${pair.day_of_week} | Пара #${pair.pair_number}</span>
-                            <span class="text-xs text-slate-400">${pair.start_time} - ${pair.end_time}</span>
-                            <span class="text-xs text-slate-500 uppercase">(${pair.type})</span>
-                        </div>
-                        <h4 class="font-medium text-white text-sm">${pair.subject}</h4>
-                        <p class="text-xs text-slate-400 mt-0.5">Ауд. ${pair.room || '—'} | Преп. ${pair.teacher || '—'} ${pair.subgroup ? `| Подгруппа ${pair.subgroup}` : ''}</p>
+                if (!grouped[pair.day_of_week]) grouped[pair.day_of_week] = [];
+                grouped[pair.day_of_week].push(pair);
+            });
+
+            daysOrder.forEach(dayName => {
+                if (!grouped[dayName] || grouped[dayName].length === 0) return;
+
+                // Блок рамка для каждого дня недели
+                const dayCard = document.createElement('div');
+                dayCard.className = "bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-lg space-y-3";
+
+                let dayHeader = `
+                    <div class="flex items-center justify-between border-b border-slate-700/80 pb-3 mb-2">
+                        <h4 class="font-bold text-base text-indigo-400 flex items-center gap-2">
+                            <span>📅 ${dayName}</span>
+                        </h4>
+                        <span class="text-xs text-slate-400 font-medium">Всего пар: ${grouped[dayName].length}</span>
                     </div>
-                    <button onclick="openAttendanceModal(${pair.id})" class="bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs px-3.5 py-2 rounded-lg transition font-medium">
-                        ${currentUser.role === 'kurator' || currentUser.role === 'student' ? 'Посмотреть журнал' : 'Отметить посещаемость'}
-                    </button>
+                    <div class="space-y-3">
                 `;
-                container.appendChild(item);
+
+                let pairsHtml = '';
+                grouped[dayName].forEach(pair => {
+                    const subLabel = pair.subgroup ? `<span class="text-indigo-300 font-medium bg-indigo-950 px-1.5 py-0.5 rounded ml-1">Подгруппа ${pair.subgroup}</span>` : '';
+                    
+                    pairsHtml += `
+                        <div class="bg-slate-900/80 border border-slate-700/60 rounded-lg p-3.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:border-indigo-500 transition">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs font-bold text-indigo-400 bg-indigo-950/80 px-2 py-0.5 rounded">Пара #${pair.pair_number}</span>
+                                    <span class="text-xs text-slate-400">${pair.start_time} - ${pair.end_time}</span>
+                                    <span class="text-xs text-slate-500 uppercase">(${pair.type})</span>
+                                </div>
+                                <h5 class="font-medium text-white text-sm">${pair.subject}</h5>
+                                <p class="text-xs text-slate-400 mt-0.5">Ауд. ${pair.room || '—'} | Преп. ${pair.teacher || '—'} ${subLabel}</p>
+                            </div>
+                            <button onclick="openAttendanceModal(${pair.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3.5 py-2 rounded-lg transition font-medium">
+                                ${currentUser.role === 'kurator' || currentUser.role === 'student' ? 'Посмотреть журнал' : 'Отметить посещаемость'}
+                            </button>
+                        </div>
+                    `;
+                });
+
+                dayCard.innerHTML = dayHeader + pairsHtml + `</div>`;
+                container.appendChild(dayCard);
             });
         }
 
@@ -256,7 +302,6 @@
             document.getElementById('modal-title').innerText = `${pair.day_of_week} — Пара №${pair.pair_number}: ${pair.subject}`;
             document.getElementById('modal-subtitle').innerText = `${pair.start_time} - ${pair.end_time} | Преподаватель: ${pair.teacher || '—'}`;
 
-            // Скрываем строку поиска для обычных студентов
             if (currentUser.role === 'student') {
                 document.getElementById('search-container').classList.add('hidden');
             } else {
