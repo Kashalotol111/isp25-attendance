@@ -82,7 +82,21 @@
         </main>
     </div>
 
-    <!-- Модалка посещаемости (для старосты) -->
+    <!-- Модалка детальной истории студента (для куратора/админа) -->
+    <div id="student-detail-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+                <h3 id="student-modal-title" class="text-base font-bold text-white">История пропусков</h3>
+                <button onclick="closeModal('student-detail-modal')" class="text-slate-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <div id="student-absences-container" class="flex-1 overflow-y-auto space-y-2 pr-1"></div>
+            <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+                <button onclick="closeModal('student-detail-modal')" class="px-5 py-2.5 bg-slate-800 text-white rounded-2xl text-xs font-semibold">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Остальные модальные окна -->
     <div id="attendance-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
@@ -97,7 +111,6 @@
         </div>
     </div>
 
-    <!-- Модалка редактирования ДЗ и файлов (для старосты) -->
     <div id="homework-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div class="flex justify-between items-center pb-3 border-b border-slate-800">
@@ -111,7 +124,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Ссылка на файл / материалы</label>
-                    <input type="text" id="hw-file-input" placeholder="https://disk.yandex.ru/... или прямая ссылка" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
+                    <input type="text" id="hw-file-input" placeholder="https://..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-indigo-500">
                 </div>
             </div>
             <div class="pt-3 border-t border-slate-800 flex justify-end gap-3">
@@ -121,7 +134,6 @@
         </div>
     </div>
 
-    <!-- Модалка детальной информации о паре (для студента) -->
     <div id="pair-detail-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
             <div class="flex justify-between items-center pb-3 border-b border-slate-800">
@@ -142,7 +154,7 @@
         if (user) {
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('app-view').classList.remove('hidden');
-            document.getElementById('user-info').textContent = `${user.full_name} (${user.role === 'admin' ? 'Староста' : 'Студент'})`;
+            document.getElementById('user-info').textContent = `${user.full_name} (${user.role === 'admin' ? 'Староста' : user.role === 'kurator' ? 'Куратор' : 'Студент'})`;
             document.getElementById('attendance-date').valueAsDate = new Date();
             loadSchedule();
         }
@@ -258,9 +270,8 @@
             } catch (err) { console.error(err); }
         }
 
-        // Клик по паре для студента
         async function handlePairClick(scheduleId, subject, hw, file) {
-            if (user.role === 'admin') return; // Админы пользуются кнопками
+            if (user.role === 'admin' || user.role === 'kurator') return; 
             
             const date = document.getElementById('attendance-date').value;
             document.getElementById('detail-subject-title').textContent = subject;
@@ -290,13 +301,11 @@
                         <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
                             <p class="text-xs text-slate-400 uppercase font-semibold mb-1">Домашнее задание:</p>
                             <p class="text-white">${hw || 'Домашнее задание не задано'}</p>
-                            ${file ? `<div class="mt-2"><a href="${file}" target="_blank" class="text-indigo-400 hover:underline text-xs font-semibold inline-flex items-center gap-1">📎 Скачать/открыть прикрепленный файл</a></div>` : ''}
+                            ${file ? `<div class="mt-2"><a href="${file}" target="_blank" class="text-indigo-400 hover:underline text-xs font-semibold inline-flex items-center gap-1">📎 Открыть файл</a></div>` : ''}
                         </div>
                     </div>
                 `;
-            } catch (err) {
-                content.innerHTML = '<p class="text-rose-400">Ошибка загрузки данных</p>';
-            }
+            } catch (err) { content.innerHTML = '<p class="text-rose-400">Ошибка загрузки</p>'; }
         }
 
         let editScheduleId = null;
@@ -310,22 +319,14 @@
         async function saveHomework() {
             const homework = document.getElementById('hw-text-input').value;
             const homework_file = document.getElementById('hw-file-input').value;
-
             try {
                 const res = await fetch('/api/schedule/update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        schedule_id: editScheduleId,
-                        homework,
-                        homework_file,
-                        userRole: user.role
-                    })
+                    body: JSON.stringify({ schedule_id: editScheduleId, homework, homework_file, userRole: user.role })
                 });
-                if (res.ok) {
-                    closeModal('homework-modal');
-                    loadSchedule();
-                } else { alert('Ошибка сохранения ДЗ'); }
+                if (res.ok) { closeModal('homework-modal'); loadSchedule(); }
+                else { alert('Ошибка сохранения ДЗ'); }
             } catch (err) { alert('Ошибка сервера'); }
         }
 
@@ -381,10 +382,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ date, schedule_id: currentScheduleId, records, userRole: user.role })
                 });
-                if (res.ok) {
-                    closeModal('attendance-modal');
-                    alert('Сохранено!');
-                } else { alert('Ошибка'); }
+                if (res.ok) { closeModal('attendance-modal'); alert('Сохранено!'); }
+                else { alert('Ошибка'); }
             } catch (err) { alert('Ошибка сервера'); }
         }
 
@@ -392,12 +391,13 @@
             document.getElementById(modalId).classList.add('hidden');
         }
 
+        // Функция загрузки статистики (для куратора и старосты — общая с кликом по студенту; для студента — личная)
         async function loadStats() {
             const title = document.getElementById('stats-title');
             const container = document.getElementById('stats-container');
 
-            if (user.role === 'admin') {
-                title.textContent = 'Общая статистика пропусков группы';
+            if (user.role === 'admin' || user.role === 'kurator') {
+                title.textContent = 'Статистика группы (нажмите на студента для просмотра его пропусков)';
                 try {
                     const res = await fetch('/api/stats');
                     const stats = await res.json();
@@ -409,13 +409,13 @@
                                     <th class="py-3 px-4 text-center">Подгруппа</th>
                                     <th class="py-3 px-4 text-center">Н (неув.)</th>
                                     <th class="py-3 px-4 text-center">Н (ув.)</th>
-                                    <th class="py-3 px-4 text-center">Всего</th>
+                                    <th class="py-3 px-4 text-center">Всего пропусков</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-800/50">
                                 ${stats.map(s => `
-                                    <tr class="hover:bg-slate-800/20">
-                                        <td class="py-3.5 px-4 font-medium text-white">${s.name}</td>
+                                    <tr onclick="openStudentAbsences(${s.student_id}, '${s.name.replace(/'/g, "\\'")}')" class="hover:bg-slate-800/40 cursor-pointer transition">
+                                        <td class="py-3.5 px-4 font-medium text-indigo-400 underline">${s.name}</td>
                                         <td class="py-3.5 px-4 text-center text-slate-400">${s.subgroup || 1}</td>
                                         <td class="py-3.5 px-4 text-center text-rose-400 font-semibold">${s.invalid_absences || 0}</td>
                                         <td class="py-3.5 px-4 text-center text-amber-400 font-semibold">${s.valid_absences || 0}</td>
@@ -464,6 +464,55 @@
                         </table>
                     `;
                 } catch (err) { container.innerHTML = '<p class="text-rose-400">Ошибка загрузки</p>'; }
+            }
+        }
+
+        // Открытие детальной истории конкретного студента для куратора
+        async function openStudentAbsences(studentId, studentName) {
+            document.getElementById('student-modal-title').textContent = `Пропуска студента: ${studentName}`;
+            const container = document.getElementById('student-absences-container');
+            container.innerHTML = '<p class="text-slate-400 text-sm">Загрузка...</p>';
+            document.getElementById('student-detail-modal').classList.remove('hidden');
+
+            try {
+                const res = await fetch(`/api/student-absences?student_id=${studentId}`);
+                const absences = await res.json();
+
+                if (absences.length === 0) {
+                    container.innerHTML = '<p class="text-slate-400 text-sm">У этого студента нет пропусков за выбранный период.</p>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-slate-500 uppercase">
+                                <th class="py-2.5 px-3">Дата</th>
+                                <th class="py-2.5 px-3">День</th>
+                                <th class="py-2.5 px-3">Пара</th>
+                                <th class="py-2.5 px-3">Предмет</th>
+                                <th class="py-2.5 px-3">Статус</th>
+                                <th class="py-2.5 px-3">Комментарий</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/50">
+                            ${absences.map(a => `
+                                <tr class="hover:bg-slate-800/20">
+                                    <td class="py-3 px-3 text-slate-300">${a.date}</td>
+                                    <td class="py-3 px-3 text-white">${a.day_of_week}</td>
+                                    <td class="py-3 px-3 text-slate-400">Пара ${a.pair_number}</td>
+                                    <td class="py-3 px-3 text-white">${a.subject}</td>
+                                    <td class="py-3 px-3 font-semibold ${a.status === 'absent_invalid' ? 'text-rose-400' : 'text-amber-400'}">
+                                        ${a.status === 'absent_invalid' ? 'Н (неув.)' : 'Н (ув.)'}
+                                    </td>
+                                    <td class="py-3 px-3 text-slate-400">${a.comment || '—'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (err) {
+                container.innerHTML = '<p class="text-rose-400 text-sm">Ошибка загрузки данных</p>';
             }
         }
     </script>
