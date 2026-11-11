@@ -8,7 +8,6 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Подключение к облачной базе данных PostgreSQL (Neon)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
@@ -16,7 +15,6 @@ const pool = new Pool({
     idleTimeoutMillis: 30000
 });
 
-// Проверка соединения при старте
 pool.query('SELECT NOW()', (err, res) => {
     if (err) {
         console.error('Ошибка подключения к PostgreSQL:', err.message);
@@ -25,7 +23,7 @@ pool.query('SELECT NOW()', (err, res) => {
     }
 });
 
-// Эндпоинт авторизации
+// Авторизация
 app.post('/api/login', async (req, res) => {
     const { login, password } = req.body;
     try {
@@ -48,7 +46,6 @@ app.get('/api/students', async (req, res) => {
         const result = await pool.query(`SELECT id, full_name as name, subgroup, login FROM users WHERE role = 'student' ORDER BY full_name`);
         res.json(result.rows);
     } catch (err) {
-        console.error('Ошибка в /api/students:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -75,12 +72,11 @@ app.get('/api/schedule', async (req, res) => {
         const result = await pool.query(query, params);
         res.json(result.rows);
     } catch (err) {
-        console.error('Ошибка в /api/schedule:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
-// Обновление расписания (ДЗ / отмена пары)
+// Обновление расписания (ДЗ / отмена)
 app.post('/api/schedule/update', async (req, res) => {
     const { schedule_id, is_cancelled, homework, userRole } = req.body;
     if (userRole !== 'admin') {
@@ -93,7 +89,6 @@ app.post('/api/schedule/update', async (req, res) => {
         );
         res.json({ success: true });
     } catch (err) {
-        console.error('Ошибка в /api/schedule/update:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -108,7 +103,6 @@ app.get('/api/attendance', async (req, res) => {
         );
         res.json(result.rows);
     } catch (err) {
-        console.error('Ошибка в /api/attendance (GET):', err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -132,12 +126,11 @@ app.post('/api/attendance', async (req, res) => {
         }
         res.json({ success: true });
     } catch (err) {
-        console.error('Ошибка в /api/attendance (POST):', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
-// Статистика группы
+// Статистика
 app.get('/api/stats', async (req, res) => {
     try {
         const query = `
@@ -157,25 +150,6 @@ app.get('/api/stats', async (req, res) => {
         const result = await pool.query(query);
         res.json(result.rows);
     } catch (err) {
-        console.error('Ошибка в /api/stats:', err.message);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.get('/api/student-stats', async (req, res) => {
-    const { student_id, year_month } = req.query;
-    try {
-        const query = `
-            SELECT a.date, s.pair_number, s.subject, a.status 
-            FROM attendance a
-            JOIN schedule s ON a.schedule_id = s.id
-            WHERE a.student_id = $1 AND TO_CHAR(a.date::DATE, 'YYYY-MM') = $2
-            ORDER BY a.date DESC, s.pair_number ASC
-        `;
-        const result = await pool.query(query, [student_id, year_month]);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('Ошибка в /api/student-stats:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
