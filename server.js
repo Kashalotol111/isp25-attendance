@@ -39,7 +39,9 @@ db.serialize(() => {
         type TEXT,
         subgroup INTEGER,
         room TEXT,
-        teacher TEXT
+        teacher TEXT,
+        is_cancelled INTEGER DEFAULT 0,
+        homework TEXT DEFAULT ''
     )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS attendance (
@@ -183,6 +185,18 @@ app.get('/api/schedule', (req, res) => {
     });
 });
 
+// Эндпоинт для отмены пары и добавления домашки
+app.post('/api/schedule/update', (req, res) => {
+    const { schedule_id, is_cancelled, homework, userRole } = req.body;
+    if (userRole !== 'admin') {
+        return res.status(403).json({ error: 'Только староста может изменять расписание!' });
+    }
+    db.run(`UPDATE schedule SET is_cancelled = ?, homework = ? WHERE id = ?`, [is_cancelled ? 1 : 0, homework || '', schedule_id], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
 app.get('/api/attendance', (req, res) => {
     const { date, schedule_id } = req.query;
     db.all(`SELECT student_id, status, comment FROM attendance WHERE date = ? AND schedule_id = ?`, [date, schedule_id], (err, rows) => {
@@ -191,20 +205,17 @@ app.get('/api/attendance', (req, res) => {
     });
 });
 
-// Исправлено сохранение: записываем только те статусы, которые не 'present' (чтобы не забивать базу лишним, либо сохраняем индивидуально)
 app.post('/api/attendance', (req, res) => {
     const { date, schedule_id, records, userRole } = req.body;
     if (userRole === 'kurator' || userRole === 'student') {
         return res.status(403).json({ error: 'У вас нет прав на редактирование посещаемости!' });
     }
     db.serialize(() => {
-        // Удаляем старые записи за эту дату и пару
         db.run(`DELETE FROM attendance WHERE date = ? AND schedule_id = ?`, [date, schedule_id], (err) => {
             if (err) return res.status(500).json({ error: err.message });
             
             const stmt = db.prepare(`INSERT INTO attendance (date, schedule_id, student_id, status, comment) VALUES (?, ?, ?, ?, ?)`);
             records.forEach(r => {
-                // Сохраняем только пропуски (absent_invalid или absent_valid), чтобы присутствие не дублировалось глобально
                 if (r.status !== 'present') {
                     stmt.run(date, schedule_id, r.student_id, r.status, r.comment || '');
                 }
@@ -228,7 +239,7 @@ app.get('/api/stats', (req, res) => {
         LEFT JOIN attendance a ON u.id = a.student_id
         WHERE u.role = 'student'
         GROUP BY u.id
-        ORDER BY u.full_name
+        ORDER BY total_absences DESC, u.full_name ASC
     `;
     db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -245,5 +256,12 @@ app.get('/api/student-stats', (req, res) => {
         WHERE a.student_id = ? AND a.date LIKE ? AND a.status != 'present'
         ORDER BY a.date DESC
     `;
-    db.all(query, [student_id, `${year_month}\%`], (err, rows) => { if (err) return res.status(500).json({ error: err.message }); res.json(rows); }); });  app.listen(PORT, () => { console.log(`Сервер запущен на порту ${PORT}`);
+    db.all(query, [student_id, `${year_month}%`], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.listen(PORT, () => {
+    console.log(`Сервер запущен на порту ${PORT}`);
 });
