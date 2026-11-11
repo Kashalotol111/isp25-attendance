@@ -5,26 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Учёт посещаемости — ИСП-О-25</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen">
+<body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-indigo-500 selection:text-white">
 
     <!-- Форма авторизации -->
-    <div id="login-view" class="flex items-center justify-center min-h-screen">
-        <div class="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700">
-            <div class="mb-6 text-center">
-                <h1 class="text-2xl font-bold tracking-wide">Группа ИСП-О-25</h1>
-                <p class="text-slate-400 text-sm mt-1">Система учёта посещаемости</p>
+    <div id="login-view" class="flex items-center justify-center min-h-screen px-4">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950 pointer-events-none"></div>
+        <div class="relative bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800">
+            <div class="mb-8 text-center">
+                <div class="w-12 h-12 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl mx-auto flex items-center justify-center mb-4 text-indigo-400 font-bold text-xl shadow-lg shadow-indigo-500/10">25</div>
+                <h1 class="text-2xl font-bold tracking-tight text-white">Группа ИСП-О-25</h1>
+                <p class="text-slate-400 text-sm mt-1">Система учёта посещаемости и расписания</p>
             </div>
             <form id="login-form" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Логин</label>
-                    <input type="text" id="login" required class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 text-white">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Логин</label>
+                    <input type="text" id="login" required class="w-full px-4 py-3.5 bg-slate-950/60 border border-slate-800 rounded-2xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-white transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Пароль</label>
-                    <input type="password" id="password" required class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 text-white">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Пароль</label>
+                    <input type="password" id="password" required class="w-full px-4 py-3.5 bg-slate-950/60 border border-slate-800 rounded-2xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-white transition">
                 </div>
-                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 transition rounded-xl font-semibold text-white shadow-lg shadow-indigo-600/30">
+                <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 transition rounded-2xl font-semibold text-white shadow-xl shadow-indigo-600/20 active:scale-[0.98]">
                     Войти в систему
                 </button>
             </form>
@@ -33,27 +39,30 @@
 
     <!-- Основной интерфейс -->
     <div id="app-view" class="hidden min-h-screen flex flex-col">
-        <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold text-white">Учёт посещаемости: ИСП-О-25</h1>
-                <p id="user-info" class="text-xs text-slate-400 mt-0.5"></p>
-            </div>
+        <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 px-6 py-4 sticky top-0 z-40 flex justify-between items-center shadow-sm">
             <div class="flex items-center gap-3">
-                <button id="stats-tab-btn" onclick="toggleStats()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 transition rounded-xl text-sm font-medium">Статистика</button>
-                <button onclick="logout()" class="px-4 py-2 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white transition rounded-xl text-sm font-medium border border-rose-600/30">Выйти</button>
+                <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-white text-sm shadow-md shadow-indigo-600/30">25</div>
+                <div>
+                    <h1 class="text-base font-bold text-white tracking-tight">ИСП-О-25</h1>
+                    <p id="user-info" class="text-xs text-slate-400 font-medium"></p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="stats-tab-btn" onclick="toggleStats()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700/80 text-slate-200 transition rounded-xl text-xs font-semibold border border-slate-700/50">Статистика</button>
+                <button onclick="logout()" class="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition rounded-xl text-xs font-semibold border border-rose-500/20">Выйти</button>
             </div>
         </header>
 
-        <main class="flex-1 p-6 max-w-6xl mx-auto w-full space-y-6">
-            <!-- Панель фильтров -->
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 flex flex-wrap gap-4 items-center justify-between">
+        <main class="flex-1 p-6 max-w-5xl mx-auto w-full space-y-6">
+            <!-- Панель управления / фильтры -->
+            <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-5 flex flex-wrap gap-4 items-center justify-between shadow-lg">
                 <div class="flex items-center gap-3">
-                    <label class="text-sm font-medium text-slate-300">Дата:</label>
-                    <input type="date" id="attendance-date" class="bg-slate-900 border border-slate-700 px-3 py-2 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Дата:</span>
+                    <input type="date" id="attendance-date" class="bg-slate-950 border border-slate-800 px-4 py-2.5 rounded-2xl text-white text-sm focus:outline-none focus:border-indigo-500">
                 </div>
                 <div class="flex items-center gap-3">
-                    <label class="text-sm font-medium text-slate-300">Неделя:</label>
-                    <select id="week-filter" onchange="loadSchedule()" class="bg-slate-900 border border-slate-700 px-3 py-2 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Неделя:</span>
+                    <select id="week-filter" onchange="loadSchedule()" class="bg-slate-950 border border-slate-800 px-4 py-2.5 rounded-2xl text-white text-sm focus:outline-none focus:border-indigo-500">
                         <option value="all">Все недели</option>
                         <option value="even">Четная (even)</option>
                         <option value="odd">Нечетная (odd)</option>
@@ -61,29 +70,24 @@
                 </div>
             </div>
 
-            <!-- Основной контент: Расписание / Статистика -->
-            <div id="main-content" class="space-y-4">
-                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
-                    <h2 class="text-lg font-semibold mb-4">Расписание пар</h2>
-                    <div id="schedule-container" class="space-y-3">
-                        <p class="text-slate-400 text-sm">Загрузка...</p>
-                    </div>
+            <!-- Контент (расписание по дням или статистика) -->
+            <div id="main-content" class="space-y-6">
+                <div id="schedule-container" class="space-y-6">
+                    <p class="text-slate-400 text-sm text-center py-10">Загрузка расписания...</p>
                 </div>
             </div>
 
-            <!-- Модальное окно для отметки посещаемости -->
-            <div id="attendance-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-                <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] flex flex-col">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 id="modal-title" class="text-lg font-bold text-white">Отметка посещаемости</h3>
-                        <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+            <!-- Модальное окно посещаемости -->
+            <div id="attendance-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] flex flex-col">
+                    <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+                        <h3 id="modal-title" class="text-base font-bold text-white">Отметка посещаемости</h3>
+                        <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl p-1">&times;</button>
                     </div>
-                    <div id="students-container" class="flex-1 overflow-y-auto space-y-3 pr-2 divide-y divide-slate-700/50">
-                        <!-- Список студентов загружается динамически -->
-                    </div>
-                    <div class="mt-6 pt-4 border-t border-slate-700 flex justify-end gap-3">
-                        <button onclick="closeModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-sm font-medium">Отмена</button>
-                        <button onclick="saveAttendance()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/30">Сохранить</button>
+                    <div id="students-container" class="flex-1 overflow-y-auto space-y-2.5 pr-1 divide-y divide-slate-800/50"></div>
+                    <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end gap-3">
+                        <button onclick="closeModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl text-xs font-semibold transition">Отмена</button>
+                        <button onclick="saveAttendance()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-semibold shadow-lg shadow-indigo-600/30 transition">Сохранить</button>
                     </div>
                 </div>
             </div>
@@ -138,27 +142,56 @@
                 const container = document.getElementById('schedule-container');
                 
                 if (schedule.length === 0) {
-                    container.innerHTML = '<p class="text-slate-400 text-sm">Расписание не найдено.</p>';
+                    container.innerHTML = '<div class="bg-slate-900/60 border border-slate-800 rounded-3xl p-10 text-center text-slate-400 text-sm">Расписание не найдено.</div>';
                     return;
                 }
 
-                container.innerHTML = schedule.map(item => `
-                    <div class="p-4 bg-slate-900 border border-slate-700/60 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div>
-                            <span class="text-xs font-semibold text-indigo-400 uppercase">${item.day_of_week} • Пара ${item.pair_number} (${item.week_type})</span>
-                            <h3 class="font-bold text-white text-base mt-0.5">${item.subject}</h3>
-                            <p class="text-xs text-slate-400 mt-0.5">Преподаватель: ${item.teacher || 'Не указан'}</p>
-                            ${item.homework ? `<p class="text-xs text-emerald-400 mt-2 bg-emerald-950/40 border border-emerald-800/40 p-2 rounded-lg"><b>ДЗ:</b> ${item.homework}</p>` : ''}
+                // Группируем пары по дням недели
+                const daysOrder = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+                const grouped = {};
+                schedule.forEach(item => {
+                    if (!grouped[item.day_of_week]) grouped[item.day_of_week] = [];
+                    grouped[item.day_of_week].push(item);
+                });
+
+                container.innerHTML = daysOrder.filter(day => grouped[day]).map(day => `
+                    <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <h2 class="text-base font-bold text-white flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 bg-indigo-500 rounded-full"></span>
+                                ${day}
+                            </h2>
+                            <span class="text-xs text-slate-500 font-medium">${grouped[day].length} пары</span>
                         </div>
-                        <div class="flex items-center gap-2 w-full md:w-auto justify-end">
-                            ${user.role === 'admin' ? `
-                                <button onclick="openAttendanceModal(${item.id}, '${item.subject}')" class="px-4 py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-600/30 transition rounded-xl text-xs font-semibold">
-                                    Отметить посещаемость
-                                </button>
-                                <button onclick="editHomework(${item.id}, '${item.homework || ''}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition rounded-xl text-xs font-medium">
-                                    ДЗ
-                                </button>
-                            ` : ''}
+                        <div class="space-y-3">
+                            ${grouped[day].map(item => `
+                                <div class="p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-slate-700 transition">
+                                    <div class="space-y-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg text-xs font-semibold">Пара ${item.pair_number}</span>
+                                            <span class="text-xs text-slate-500">${item.week_type === 'even' ? 'Четная' : 'Нечетная'}</span>
+                                        </div>
+                                        <h3 class="font-semibold text-white text-sm">${item.subject}</h3>
+                                        <p class="text-xs text-slate-400">Преподаватель: <span class="text-slate-300">${item.teacher || 'Не указан'}</span></p>
+                                        ${item.homework ? `
+                                            <div class="mt-2 text-xs text-emerald-400 bg-emerald-950/30 border border-emerald-900/30 p-2.5 rounded-xl flex items-center justify-between gap-2">
+                                                <span><b>ДЗ:</b> ${item.homework}</span>
+                                                ${item.homework_file ? `<a href="${item.homework_file}" target="_blank" class="text-indigo-400 hover:underline font-medium shrink-0">📎 Файл</a>` : ''}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    <div class="flex items-center gap-2 w-full md:w-auto justify-end shrink-0">
+                                        ${user.role === 'admin' ? `
+                                            <button onclick="openAttendanceModal(${item.id}, '${item.subject}')" class="px-4 py-2 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-600/20 transition rounded-xl text-xs font-semibold">
+                                                Посещаемость
+                                            </button>
+                                            <button onclick="editHomework(${item.id}, '${item.homework || ''}', '${item.homework_file || ''}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition rounded-xl text-xs font-medium">
+                                                ДЗ и файл
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
                 `).join('');
@@ -187,18 +220,18 @@
                 container.innerHTML = students.map(s => {
                     const record = attMap[s.id] || { status: 'present', comment: '' };
                     return `
-                        <div class="py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 student-row" data-id="${s.id}">
+                        <div class="py-2.5 px-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 student-row" data-id="${s.id}">
                             <div>
-                                <p class="font-medium text-sm text-white">${s.name}</p>
-                                <span class="text-xs text-slate-400">Подгруппа: ${s.subgroup || 1}</span>
+                                <p class="font-medium text-xs text-white">${s.name}</p>
+                                <span class="text-[10px] text-slate-500">Подгруппа: ${s.subgroup || 1}</span>
                             </div>
                             <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                                <select class="status-select bg-slate-900 border border-slate-700 text-xs px-2.5 py-1.5 rounded-lg text-white">
+                                <select class="status-select bg-slate-950 border border-slate-800 text-xs px-2.5 py-1.5 rounded-xl text-white focus:outline-none focus:border-indigo-500">
                                     <option value="present" ${record.status === 'present' ? 'selected' : ''}>Присутствует</option>
                                     <option value="absent_invalid" ${record.status === 'absent_invalid' ? 'selected' : ''}>Н (неув)</option>
                                     <option value="absent_valid" ${record.status === 'absent_valid' ? 'selected' : ''}>Н (ув)</option>
                                 </select>
-                                <input type="text" placeholder="Комментарий" value="${record.comment || ''}" class="comment-input bg-slate-900 border border-slate-700 text-xs px-2.5 py-1.5 rounded-lg text-white w-28">
+                                <input type="text" placeholder="Комментарий" value="${record.comment || ''}" class="comment-input bg-slate-950 border border-slate-800 text-xs px-2.5 py-1.5 rounded-xl text-white w-28 focus:outline-none focus:border-indigo-500">
                             </div>
                         </div>
                     `;
@@ -249,9 +282,11 @@
             }
         }
 
-        async function editHomework(scheduleId, currentHw) {
+        async function editHomework(scheduleId, currentHw, currentFile) {
             const hw = prompt('Введите домашнее задание:', currentHw);
             if (hw === null) return;
+            const fileUrl = prompt('Введите ссылку на файл с ДЗ (или оставьте пустым):', currentFile);
+            if (fileUrl === null) return;
 
             try {
                 const res = await fetch('/api/schedule/update', {
@@ -260,6 +295,7 @@
                     body: JSON.stringify({
                         schedule_id: scheduleId,
                         homework: hw,
+                        homework_file: fileUrl,
                         is_cancelled: false,
                         userRole: user.role
                     })
@@ -276,12 +312,12 @@
         }
 
         async function toggleStats() {
-            const content = document.getElementById('main-content');
-            content.innerHTML = `
-                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold">Статистика пропусков</h2>
-                        <button onclick="loadSchedule(); document.getElementById('main-content').innerHTML = '<div class=\\'bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl\\'><h2 class=\\'text-lg font-semibold mb-4\\'>Расписание пар</h2><div id=\\'schedule-container\\' class=\\'space-y-3\\'></div></div>'; loadSchedule();" class="text-xs text-indigo-400 hover:underline">← Назад к расписанию</button>
+            const container = document.getElementById('main-content');
+            container.innerHTML = `
+                <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h2 class="text-base font-bold text-white">Статистика пропусков</h2>
+                        <button onclick="loadSchedule();" class="text-xs text-indigo-400 hover:underline font-medium">← Назад к расписанию</button>
                     </div>
                     <div id="stats-container" class="overflow-x-auto">
                         <p class="text-slate-400 text-sm">Загрузка статистики...</p>
@@ -292,17 +328,17 @@
             try {
                 const res = await fetch('/api/stats');
                 const stats = await res.json();
-                const container = document.getElementById('stats-container');
+                const statContainer = document.getElementById('stats-container');
 
                 if (stats.length === 0) {
-                    container.innerHTML = '<p class="text-slate-400 text-sm">Нет данных для статистики.</p>';
+                    statContainer.innerHTML = '<p class="text-slate-400 text-sm">Нет данных для статистики.</p>';
                     return;
                 }
 
-                container.innerHTML = `
-                    <table class="w-full text-left border-collapse text-sm">
+                statContainer.innerHTML = `
+                    <table class="w-full text-left border-collapse text-xs">
                         <thead>
-                            <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase">
+                            <tr class="border-b border-slate-800 text-slate-500 uppercase tracking-wider">
                                 <th class="py-3 px-4">Студент</th>
                                 <th class="py-3 px-4 text-center">Подгруппа</th>
                                 <th class="py-3 px-4 text-center">Н (неув.)</th>
@@ -310,14 +346,14 @@
                                 <th class="py-3 px-4 text-center">Всего пропусков</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-700/50">
+                        <tbody class="divide-y divide-slate-800/50">
                             ${stats.map(s => `
-                                <tr class="hover:bg-slate-900/40">
-                                    <td class="py-3 px-4 font-medium text-white">${s.name}</td>
-                                    <td class="py-3 px-4 text-center text-slate-400">${s.subgroup || 1}</td>
-                                    <td class="py-3 px-4 text-center text-rose-400 font-semibold">${s.invalid_absences || 0}</td>
-                                    <td class="py-3 px-4 text-center text-amber-400 font-semibold">${s.valid_absences || 0}</td>
-                                    <td class="py-3 px-4 text-center font-bold text-white">${s.total_absences || 0}</td>
+                                <tr class="hover:bg-slate-800/20 transition">
+                                    <td class="py-3.5 px-4 font-medium text-white">${s.name}</td>
+                                    <td class="py-3.5 px-4 text-center text-slate-400">${s.subgroup || 1}</td>
+                                    <td class="py-3.5 px-4 text-center text-rose-400 font-semibold">${s.invalid_absences || 0}</td>
+                                    <td class="py-3.5 px-4 text-center text-amber-400 font-semibold">${s.valid_absences || 0}</td>
+                                    <td class="py-3.5 px-4 text-center font-bold text-white">${s.total_absences || 0}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
