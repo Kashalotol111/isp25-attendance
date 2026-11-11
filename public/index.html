@@ -103,6 +103,29 @@
         </div>
     </div>
 
+    <!-- Модальное окно управления парой / ДЗ для старосты -->
+    <div id="admin-pair-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+                <h3 class="font-bold text-base text-white">Управление парой</h3>
+                <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+            </div>
+            <input type="hidden" id="admin-schedule-id">
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Домашнее задание / Примечание</label>
+                <textarea id="admin-homework-input" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="Введите домашнее задание..."></textarea>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="admin-cancelled-checkbox" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500">
+                <label for="admin-cancelled-checkbox" class="text-sm text-slate-200">Пара отменена</label>
+            </div>
+            <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+                <button onclick="closeAdminModal()" class="px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 rounded-lg">Отмена</button>
+                <button onclick="saveAdminPairChanges()" class="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Модальное окно общей статистики -->
     <div id="stats-modal" class="fixed inset-0 bg-slate-950/80 hidden flex items-center justify-center p-4 z-40">
         <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
@@ -266,21 +289,37 @@
                 let pairsHtml = '';
                 grouped[dayName].forEach(pair => {
                     const subLabel = pair.subgroup ? `<span class="text-indigo-300 font-medium bg-indigo-950 px-1.5 py-0.5 rounded ml-1">Подгруппа ${pair.subgroup}</span>` : '';
+                    const cancelledBadge = pair.is_cancelled ? `<span class="bg-rose-950 text-rose-400 font-semibold px-2 py-0.5 rounded text-xs ml-2">ПАРА ОТМЕНЕНА</span>` : '';
+                    const hwSection = pair.homework ? `<div class="mt-2 text-xs bg-slate-950/60 p-2 rounded border border-slate-800 text-amber-300"><b>ДЗ / Примечание:</b> ${pair.homework}</div>` : '';
+                    
+                    let adminButtons = '';
+                    if (currentUser.role === 'admin') {
+                        adminButtons = `
+                            <button onclick="openAdminModal(${pair.id})" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs px-3 py-2 rounded-lg transition font-medium">
+                                ⚙️ Изменить / ДЗ
+                            </button>
+                        `;
+                    }
                     
                     pairsHtml += `
-                        <div class="bg-slate-900/80 border border-slate-700/60 rounded-lg p-3.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:border-indigo-500 transition">
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
+                        <div class="bg-slate-900/80 border ${pair.is_cancelled ? 'border-rose-900/50 bg-rose-950/10' : 'border-slate-700/60'} rounded-lg p-3.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 hover:border-indigo-500 transition">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1 flex-wrap">
                                     <span class="text-xs font-bold text-indigo-400 bg-indigo-950/80 px-2 py-0.5 rounded">Пара #${pair.pair_number}</span>
                                     <span class="text-xs text-slate-400">${pair.start_time} - ${pair.end_time}</span>
                                     <span class="text-xs text-slate-500 uppercase">(${pair.type})</span>
+                                    ${cancelledBadge}
                                 </div>
                                 <h5 class="font-medium text-white text-sm">${pair.subject}</h5>
                                 <p class="text-xs text-slate-400 mt-0.5">Ауд. ${pair.room || '—'} | Преп. ${pair.teacher || '—'} ${subLabel}</p>
+                                ${hwSection}
                             </div>
-                            <button onclick="openAttendanceModal(${pair.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3.5 py-2 rounded-lg transition font-medium">
-                                ${currentUser.role === 'kurator' || currentUser.role === 'student' ? 'Посмотреть журнал' : 'Отметить посещаемость'}
-                            </button>
+                            <div class="flex items-center gap-2">
+                                ${adminButtons}
+                                <button onclick="openAttendanceModal(${pair.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3.5 py-2 rounded-lg transition font-medium">
+                                    ${currentUser.role === 'kurator' || currentUser.role === 'student' ? 'Посмотреть журнал' : 'Отметить посещаемость'}
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
@@ -325,7 +364,6 @@
             if (currentUser.role === 'student') {
                 listToRender = allStudents.filter(st => st.id === currentUser.id);
             } else if (pair.subgroup) {
-                // Если у пары указана подгруппа (1 или 2), показываем ТОЛЬКО студентов этой подгруппы
                 listToRender = allStudents.filter(st => st.subgroup === pair.subgroup);
             }
 
@@ -357,164 +395,46 @@
             document.getElementById('attendance-modal').classList.remove('hidden');
         }
 
-        async function openStatsModal() {
-            document.getElementById('stats-modal').classList.remove('hidden');
-            const container = document.getElementById('stats-container');
-            container.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">Загрузка статистики...</p>`;
+        function openAdminModal(scheduleId) {
+            const pair = scheduleCache.find(s => s.id === scheduleId);
+            if (!pair) return;
+            document.getElementById('admin-schedule-id').value = pair.id;
+            document.getElementById('admin-homework-input').value = pair.homework || '';
+            document.getElementById('admin-cancelled-checkbox').checked = pair.is_cancelled === 1;
+            document.getElementById('admin-pair-modal').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('admin-pair-modal').classList.add('hidden');
+        }
+
+        async function saveAdminPairChanges() {
+            const schedule_id = document.getElementById('admin-schedule-id').value;
+            const homework = document.getElementById('admin-homework-input').value;
+            const is_cancelled = document.getElementById('admin-cancelled-checkbox').checked ? 1 : 0;
 
             try {
-                const res = await fetch('/api/stats');
-                statsCache = await res.json();
-
-                let html = `
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-700 text-xs text-slate-400 uppercase">
-                                <th class="py-2 px-3">ФИО Студента</th>
-                                <th class="py-2 px-3 text-center">Подгруппа</th>
-                                <th class="py-2 px-3 text-center text-rose-400">Н (Неув.)</th>
-                                <th class="py-2 px-3 text-center text-amber-400">Н (Ув.)</th>
-                                <th class="py-2 px-3 text-center font-bold">Всего пропусков</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-700/50 text-sm">
-                `;
-
-                statsCache.forEach(st => {
-                    html += `
-                        <tr class="hover:bg-slate-900/40">
-                            <td class="py-2.5 px-3 font-medium text-slate-200">${st.name}</td>
-                            <td class="py-2.5 px-3 text-center text-slate-400">${st.subgroup}</td>
-                            <td class="py-2.5 px-3 text-center font-bold text-rose-400">${st.invalid_absences || 0}</td>
-                            <td class="py-2.5 px-3 text-center font-bold text-amber-400">${st.valid_absences || 0}</td>
-                            <td class="py-2.5 px-3 text-center font-bold text-indigo-300">${st.total_absences || 0}</td>
-                        </tr>
-                    `;
-                });
-
-                html += `</tbody></table>`;
-                container.innerHTML = html;
-            } catch (err) {
-                container.innerHTML = `<p class="text-sm text-rose-400 text-center py-4">Ошибка загрузки статистики</p>`;
-            }
-        }
-
-        function closeStatsModal() {
-            document.getElementById('stats-modal').classList.add('hidden');
-        }
-
-        async function openStudentStatsModal() {
-            document.getElementById('student-stats-modal').classList.remove('hidden');
-            await loadStudentStats();
-        }
-
-        async function loadStudentStats() {
-            const monthVal = document.getElementById('stats-month-input').value;
-            const container = document.getElementById('student-stats-container');
-            container.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">Загрузка пропусков...</p>`;
-
-            try {
-                const res = await fetch(`/api/student-stats?student_id=${currentUser.id}&year_month=${monthVal}`);
-                const records = await res.json();
-
-                if (records.length === 0) {
-                    container.innerHTML = `<p class="text-sm text-slate-400 text-center py-4">За выбранный месяц пропусков (энок) нет.</p>`;
-                    return;
-                }
-
-                let html = `<div class="space-y-2">`;
-                records.forEach(r => {
-                    const statusText = r.status === 'absent_invalid' ? '<span class="text-rose-400 font-bold">Н (Неуважительная)</span>' : '<span class="text-amber-400 font-bold">Н (Уважительная)</span>';
-                    html += `
-                        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-700/50 flex justify-between items-center text-sm">
-                            <div>
-                                <span class="text-indigo-400 font-semibold">${r.date}</span> (Пара #${r.pair_number})
-                                <p class="text-white font-medium text-xs mt-0.5">${r.subject}</p>
-                            </div>
-                            <div>${statusText}</div>
-                        </div>
-                    `;
-                });
-                html += `</div>`;
-                container.innerHTML = html;
-            } catch (err) {
-                container.innerHTML = `<p class="text-sm text-rose-400 text-center py-4">Ошибка загрузки данных</p>`;
-            }
-        }
-
-        function closeStudentStatsModal() {
-            document.getElementById('student-stats-modal').classList.add('hidden');
-        }
-
-        function exportToExcel() {
-            if (!statsCache || statsCache.length === 0) {
-                alert('Нет данных для выгрузки');
-                return;
-            }
-
-            let csvContent = "\uFEFFФИО Студента;Подгруппа;Н (Неуважительная);Н (Уважительная);Всего пропусков\n";
-            statsCache.forEach(st => {
-                csvContent += `"${st.name}";${st.subgroup};${st.invalid_absences || 0};${st.valid_absences || 0};${st.total_absences || 0}\n`;
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `isp25_attendance_stats_${new Date().toISOString().slice(0, 10)}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        function closeModal() {
-            document.getElementById('attendance-modal').classList.add('hidden');
-        }
-
-        function filterStudentsList() {
-            const query = document.getElementById('student-search').value.toLowerCase();
-            const rows = document.querySelectorAll('.student-row');
-            rows.forEach(r => {
-                const name = r.querySelector('span').innerText.toLowerCase();
-                r.style.display = name.includes(query) ? 'flex' : 'none';
-            });
-        }
-
-        async function saveAttendance() {
-            const dateVal = document.getElementById('selected-date').value;
-            const selects = document.querySelectorAll('.status-select');
-            const records = [];
-
-            selects.forEach(sel => {
-                records.push({
-                    student_id: parseInt(sel.dataset.studentId),
-                    status: sel.value
-                });
-            });
-
-            try {
-                const res = await fetch('/api/attendance', {
+                const res = await fetch('/api/schedule/update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        date: dateVal,
-                        schedule_id: activePairId,
-                        records,
+                        schedule_id: parseInt(schedule_id),
+                        is_cancelled,
+                        homework,
                         userRole: currentUser.role
                     })
                 });
-
+                const data = await res.json();
                 if (res.ok) {
-                    alert('Посещаемость успешно сохранена!');
-                    closeModal();
+                    closeAdminModal();
+                    await loadSchedule();
                 } else {
-                    const data = await res.json();
                     alert(data.error || 'Ошибка сохранения');
                 }
             } catch (err) {
-                alert('Ошибка отправки данных на сервер');
+                alert('Ошибка соединения с сервером');
             }
         }
-    </script>
-</body>
-</html>
+
+        async function openStatsModal() {
+            document.getElementById('stats-modal').classList.remove('hidden');
