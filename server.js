@@ -32,7 +32,7 @@ app.get('/api/students', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Умное расписание с фильтрацией по подгруппам для студентов
+// Умное расписание с безопасной фильтрацией подгрупп для студентов
 app.get('/api/schedule', async (req, res) => {
     const { week, date, day, user_id, role } = req.query;
     try {
@@ -53,14 +53,14 @@ app.get('/api/schedule', async (req, res) => {
             query += ` AND s.day_of_week = $${params.length}`;
         }
 
-        // Если это студент, узнаем его подгруппу и показываем только его подгруппу + общие пары
+        // Безопасная фильтрация для студентов: видят свою подгруппу, общие пары и пустые поля
         if (role === 'student' && user_id) {
             const userRes = await pool.query(`SELECT subgroup FROM users WHERE id = $1`, [user_id]);
             if (userRes.rows.length > 0) {
-                const userSubgroup = userRes.rows[0].subgroup;
+                const userSubgroup = String(userRes.rows[0].subgroup || '').trim();
                 if (userSubgroup) {
                     params.push(userSubgroup);
-                    query += ` AND (s.subgroup = $${params.length} OR s.subgroup IS NULL OR s.subgroup = 'Общая' OR s.subgroup = '')`;
+                    query += ` AND (s.subgroup = $${params.length} OR s.subgroup IS NULL OR s.subgroup = '' OR s.subgroup = 'Общая' OR s.subgroup = 'общая')`;
                 }
             }
         }
@@ -172,9 +172,7 @@ app.get('/api/homework-status', async (req, res) => {
             [student_id, date, schedule_id]
         );
         res.json(result.rows[0] || { is_completed: false });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/api/homework-status', async (req, res) => {
@@ -188,9 +186,7 @@ app.post('/api/homework-status', async (req, res) => {
             [student_id, date, schedule_id, is_completed]
         );
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
