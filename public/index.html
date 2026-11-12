@@ -163,20 +163,54 @@
 
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
-        let currentScheduleId = null;
-        let currentPairSubgroup = null;
         let currentWeekFilter = 'odd';
         let currentDayFilter = 'all';
+        let editScheduleId = null;
+        let editScheduleDate = null;
+        let currentScheduleId = null;
+        let currentPairSubgroup = null;
+        let currentAttendanceDate = null;
+
         const daysMap = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
         const dayNamesList = ['all', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+
+        // Функция для вычисления правильных дат для всех дней текущей недели
+        function getWeekDates(baseDateStr) {
+            const date = new Date(baseDateStr);
+            const dayOfWeek = date.getDay();
+            const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            
+            const monday = new Date(date);
+            monday.setDate(date.getDate() + diffToMonday);
+
+            const result = {};
+            for (let i = 0; i < 7; i++) {
+                const current = new Date(monday);
+                current.setDate(monday.getDate() + i);
+                const isoDate = current.toISOString().split('T')[0];
+                result[daysMap[current.getDay()]] = isoDate;
+            }
+            return result;
+        }
+
+        // Преобразование YYYY-MM-DD в формат DD.MM.YY (например 12.11.26)
+        function formatDateFriendly(dateStr) {
+            if (!dateStr) return '';
+            const [y, m, d] = dateStr.split('-');
+            return `${d}.${m}.${y.slice(-2)}`;
+        }
 
         if (user) {
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('app-view').classList.remove('hidden');
             document.getElementById('user-info').textContent = `${user.full_name} (${user.role === 'admin' ? 'Староста' : user.role === 'kurator' ? 'Куратор' : 'Студент'})`;
             
-            const today = new Date();
-            document.getElementById('attendance-date').valueAsDate = today;
+            // Ставим сегодняшнюю дату при загрузке и выбираем нужную кнопку дня
+            const todayStr = new Date().toISOString().split('T')[0];
+            document.getElementById('attendance-date').value = todayStr;
+            const todayName = daysMap[new Date(todayStr).getDay()];
+            currentDayFilter = todayName;
+            updateDayButtons();
             
             loadSchedule();
         }
@@ -192,16 +226,36 @@
             loadSchedule();
         }
 
-        function setDayFilter(day) {
-            currentDayFilter = day;
+        function updateDayButtons() {
             dayNamesList.forEach(d => {
                 const btn = document.getElementById(`btn-day-${d}`);
                 if (btn) btn.className = 'px-3 py-1.5 bg-slate-950 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition';
             });
-            const activeBtn = document.getElementById(`btn-day-${day}`);
+            const activeBtn = document.getElementById(`btn-day-${currentDayFilter}`);
             if (activeBtn) activeBtn.className = 'px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-semibold transition';
+        }
+
+        function setDayFilter(day) {
+            currentDayFilter = day;
+            updateDayButtons();
+            
+            // Если выбран конкретный день, автоматически меняем дату в календаре на дату этого дня!
+            if (day !== 'all') {
+                const baseDateStr = document.getElementById('attendance-date').value || new Date().toISOString().split('T')[0];
+                const weekDates = getWeekDates(baseDateStr);
+                document.getElementById('attendance-date').value = weekDates[day];
+            }
+            
             loadSchedule();
         }
+
+        // Если пользователь сам меняет дату в календаре, обновляем кнопку дня
+        document.getElementById('attendance-date').addEventListener('change', (e) => {
+            const dateObj = new Date(e.target.value);
+            currentDayFilter = daysMap[dateObj.getDay()];
+            updateDayButtons();
+            loadSchedule();
+        });
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -247,19 +301,32 @@
             }
         }
 
-        document.getElementById('attendance-date').addEventListener('change', loadSchedule);
-
         async function loadSchedule() {
-            const dateInput = document.getElementById('attendance-date').value;
-            const selectedDateObj = new Date(dateInput);
-            const dayOfWeek = daysMap[selectedDateObj.getDay()];
-            const queryDay = currentDayFilter === 'all' ? dayOfWeek : currentDayFilter;
+            let dateInput = document.getElementById('attendance-date').value;
+            if (!dateInput) {
+                dateInput = new Date().toISOString().split('T')[0];
+                document.getElementById('attendance-date').value = dateInput;
+            }
+
+            const weekDates = getWeekDates(dateInput);
             
             try {
-                const res = await fetch(`/api/schedule?week=${currentWeekFilter}&date=${dateInput}&day=${queryDay}&user_id=${user.id}&role=${user.role}`);
-                const schedule = await res.json();
+                let schedule = [];
+
+                // Если "Все дни", загружаем расписание для каждого дня текущей недели отдельно
+                if (currentDayFilter === 'all') {
+                    const daysToFetch = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+                    const promises = daysToFetch.map(day => 
+                        fetch(`/api/schedule?week=${currentWeekFilter}&date=${weekDates[day]}&day=${day}&user_id=${user.id}&role=${user.role}`).then(r => r.json())
+                    );
+                    const results = await Promise.all(promises);
+                    schedule = results.flat();
+                } else {
+                    const res = await fetch(`/api/schedule?week=${currentWeekFilter}&date=${dateInput}&day=${currentDayFilter}&user_id=${user.id}&role=${user.role}`);
+                    schedule = await res.json();
+                }
+
                 const container = document.getElementById('schedule-container');
-                
                 if (schedule.length === 0) {
                     container.innerHTML = `<div class="bg-slate-900/60 border border-slate-800 rounded-2xl sm:rounded-3xl p-8 text-center text-slate-400 text-xs sm:text-sm">Расписание не найдено.</div>`;
                     return;
@@ -267,11 +334,13 @@
 
                 let completedMap = {};
                 if (user.role === 'student') {
-                    for (const item of schedule) {
-                        const statusRes = await fetch(`/api/homework-status?student_id=${user.id}&date=${dateInput}&schedule_id=${item.id}`);
+                    const statusPromises = schedule.map(async item => {
+                        const itemDate = weekDates[item.day_of_week];
+                        const statusRes = await fetch(`/api/homework-status?student_id=${user.id}&date=${itemDate}&schedule_id=${item.id}`);
                         const statusData = await statusRes.json();
-                        if (statusData.is_completed) completedMap[item.id] = true;
-                    }
+                        if (statusData.is_completed) completedMap[item.id + '_' + itemDate] = true;
+                    });
+                    await Promise.all(statusPromises);
                 }
 
                 const daysOrder = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
@@ -283,20 +352,26 @@
 
                 container.innerHTML = Object.keys(grouped).sort((a, b) => daysOrder.indexOf(a) - daysOrder.indexOf(b)).map(day => {
                     const dayPairs = grouped[day];
+                    const dayDateIso = weekDates[day]; 
+                    const formattedDate = formatDateFriendly(dayDateIso); // Формат: 12.11.26
+                    
                     return `
                         <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl space-y-3.5">
                             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                                 <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
                                     <span class="w-2.5 h-2.5 bg-indigo-500 rounded-full"></span>
-                                    ${day} (${dateInput})
+                                    ${day} (${formattedDate})
                                 </h2>
                                 <span class="text-xs text-slate-500 font-medium">${dayPairs.length} пары</span>
                             </div>
                             <div class="space-y-3">
                                 ${dayPairs.map(item => {
-                                    const isDone = completedMap[item.id];
+                                    const isDone = completedMap[item.id + '_' + dayDateIso];
+                                    const safeSubject = (item.subject || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                                    const safeHw = (item.homework || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                                    
                                     return `
-                                        <div onclick="handlePairClick(${item.id}, '${item.subject.replace(/'/g, "\\'")}', '${(item.homework || '').replace(/'/g, "\\'")}', '${item.homework_file || ''}')" 
+                                        <div onclick="handlePairClick(${item.id}, '${safeSubject}', '${safeHw}', '${item.homework_file || ''}', '${dayDateIso}')" 
                                              class="p-3.5 sm:p-4 bg-slate-950/60 border ${isDone ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-slate-800/80'} rounded-2xl flex flex-col gap-3 hover:border-indigo-500/50 transition cursor-pointer">
                                             <div class="space-y-1">
                                                 <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -316,17 +391,17 @@
                                             </div>
                                             <div class="flex items-center gap-2 w-full justify-between pt-2 border-t border-slate-900" onclick="event.stopPropagation()">
                                                 ${user.role === 'student' && item.homework ? `
-                                                    <button onclick="toggleHomeworkStatus(${item.id}, ${!isDone})" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${isDone ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 hover:bg-emerald-600 hover:text-white'}">
+                                                    <button onclick="toggleHomeworkStatus(${item.id}, ${!isDone}, '${dayDateIso}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${isDone ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 hover:bg-emerald-600 hover:text-white'}">
                                                         ${isDone ? 'Снять отметку' : '✓ Сделано'}
                                                     </button>
                                                 ` : '<div></div>'}
                                                 
                                                 ${user.role === 'admin' ? `
                                                     <div class="flex items-center gap-2 ml-auto">
-                                                        <button onclick="openAttendanceModal(${item.id}, '${item.subject.replace(/'/g, "\\'")}', '${item.subgroup || ''}')" class="px-3 py-2 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-600/20 transition rounded-xl text-xs font-semibold">
+                                                        <button onclick="openAttendanceModal(${item.id}, '${safeSubject}', '${item.subgroup || ''}', '${dayDateIso}')" class="px-3 py-2 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-600/20 transition rounded-xl text-xs font-semibold">
                                                             Посещаемость
                                                         </button>
-                                                        <button onclick="openHomeworkModal(${item.id}, '${(item.homework || '').replace(/'/g, "\\'")}', '${item.homework_file || ''}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition rounded-xl text-xs font-medium">
+                                                        <button onclick="openHomeworkModal(${item.id}, '${safeHw}', '${item.homework_file || ''}', '${dayDateIso}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition rounded-xl text-xs font-medium">
                                                             ДЗ
                                                         </button>
                                                     </div>
@@ -342,23 +417,21 @@
             } catch (err) { console.error(err); }
         }
 
-        async function toggleHomeworkStatus(scheduleId, isCompleted) {
-            const date = document.getElementById('attendance-date').value;
+        async function toggleHomeworkStatus(scheduleId, isCompleted, dateStr) {
             try {
                 const res = await fetch('/api/homework-status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ student_id: user.id, date, schedule_id: scheduleId, is_completed: isCompleted })
+                    body: JSON.stringify({ student_id: user.id, date: dateStr, schedule_id: scheduleId, is_completed: isCompleted })
                 });
                 if (res.ok) { loadSchedule(); }
                 else { alert('Ошибка обновления статуса'); }
             } catch (err) { alert('Ошибка сервера'); }
         }
 
-        async function handlePairClick(scheduleId, subject, hw, file) {
+        async function handlePairClick(scheduleId, subject, hw, file, dateStr) {
             if (user.role === 'admin' || user.role === 'kurator') return; 
             
-            const date = document.getElementById('attendance-date').value;
             document.getElementById('detail-subject-title').textContent = subject;
             const content = document.getElementById('pair-detail-content');
             
@@ -367,8 +440,8 @@
 
             try {
                 const [attRes, statusRes] = await Promise.all([
-                    fetch(`/api/attendance?date=${date}&schedule_id=${scheduleId}`),
-                    fetch(`/api/homework-status?student_id=${user.id}&date=${date}&schedule_id=${scheduleId}`)
+                    fetch(`/api/attendance?date=${dateStr}&schedule_id=${scheduleId}`),
+                    fetch(`/api/homework-status?student_id=${user.id}&date=${dateStr}&schedule_id=${scheduleId}`)
                 ]);
                 const attendance = await attRes.json();
                 const statusData = await statusRes.json();
@@ -383,7 +456,7 @@
                 content.innerHTML = `
                     <div class="space-y-3">
                         <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                            <p class="text-[11px] text-slate-400 uppercase font-semibold mb-1">Ваш статус на ${date}:</p>
+                            <p class="text-[11px] text-slate-400 uppercase font-semibold mb-1">Ваш статус на ${formatDateFriendly(dateStr)}:</p>
                             <p class="text-xs sm:text-sm">${statusText}</p>
                             ${myRecord && myRecord.comment ? `<p class="text-xs text-slate-400 mt-2"><b>Комментарий:</b> ${myRecord.comment}</p>` : ''}
                         </div>
@@ -400,41 +473,40 @@
             } catch (err) { content.innerHTML = '<p class="text-rose-400 text-xs">Ошибка загрузки</p>'; }
         }
 
-        let editScheduleId = null;
-        function openHomeworkModal(id, hw, file) {
+        function openHomeworkModal(id, hw, file, dateStr) {
             editScheduleId = id;
+            editScheduleDate = dateStr;
             document.getElementById('hw-text-input').value = hw;
             document.getElementById('hw-file-input').value = file;
             document.getElementById('homework-modal').classList.remove('hidden');
         }
 
         async function saveHomework() {
-            const date = document.getElementById('attendance-date').value;
             const homework = document.getElementById('hw-text-input').value;
             const homework_file = document.getElementById('hw-file-input').value;
             try {
                 const res = await fetch('/api/schedule/update', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ schedule_id: editScheduleId, date, homework, homework_file, userRole: user.role })
+                    body: JSON.stringify({ schedule_id: editScheduleId, date: editScheduleDate, homework, homework_file, userRole: user.role })
                 });
                 if (res.ok) { closeModal('homework-modal'); loadSchedule(); }
                 else { alert('Ошибка сохранения ДЗ'); }
             } catch (err) { alert('Ошибка сервера'); }
         }
 
-        async function openAttendanceModal(scheduleId, subjectName, subgroup) {
+        async function openAttendanceModal(scheduleId, subjectName, subgroup, dateStr) {
             currentScheduleId = scheduleId;
             currentPairSubgroup = subgroup ? subgroup.trim() : '';
-            const date = document.getElementById('attendance-date').value;
+            currentAttendanceDate = dateStr;
             
             let subTitle = currentPairSubgroup ? ` (Подгруппа ${currentPairSubgroup})` : ' (Общая пара)';
-            document.getElementById('modal-title').textContent = `${subjectName}${subTitle} — ${date}`;
+            document.getElementById('modal-title').textContent = `${subjectName}${subTitle} — ${formatDateFriendly(dateStr)}`;
             
             try {
                 const [studentsRes, attRes] = await Promise.all([
                     fetch('/api/students'),
-                    fetch(`/api/attendance?date=${date}&schedule_id=${scheduleId}`)
+                    fetch(`/api/attendance?date=${dateStr}&schedule_id=${scheduleId}`)
                 ]);
                 let students = await studentsRes.json();
                 const attendance = await attRes.json();
@@ -475,7 +547,6 @@
         }
 
         async function saveAttendance() {
-            const date = document.getElementById('attendance-date').value;
             const rows = document.querySelectorAll('.student-row');
             const records = [];
 
@@ -491,7 +562,7 @@
                 const res = await fetch('/api/attendance', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ date, schedule_id: currentScheduleId, records, userRole: user.role })
+                    body: JSON.stringify({ date: currentAttendanceDate, schedule_id: currentScheduleId, records, userRole: user.role })
                 });
                 if (res.ok) { closeModal('attendance-modal'); alert('Сохранено!'); }
                 else { alert('Ошибка'); }
@@ -560,7 +631,7 @@
                             <tbody class="divide-y divide-slate-800/50">
                                 ${absences.map(a => `
                                     <tr class="hover:bg-slate-800/20">
-                                        <td class="py-3.5 px-3 text-slate-300">${a.date}</td>
+                                        <td class="py-3.5 px-3 text-slate-300">${formatDateFriendly(a.date)}</td>
                                         <td class="py-3.5 px-3 text-white font-medium">${a.day_of_week}</td>
                                         <td class="py-3.5 px-3 text-slate-400">Пара ${a.pair_number}</td>
                                         <td class="py-3.5 px-3 text-white">${a.subject}</td>
@@ -607,7 +678,7 @@
                         <tbody class="divide-y divide-slate-800/50">
                             ${absences.map(a => `
                                 <tr class="hover:bg-slate-800/20">
-                                    <td class="py-3 px-2 text-slate-300">${a.date}</td>
+                                    <td class="py-3 px-2 text-slate-300">${formatDateFriendly(a.date)}</td>
                                     <td class="py-3 px-2 text-white">${a.day_of_week}</td>
                                     <td class="py-3 px-2 text-slate-400">${a.pair_number}</td>
                                     <td class="py-3 px-2 text-white">${a.subject}</td>
