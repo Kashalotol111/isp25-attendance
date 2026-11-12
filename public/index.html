@@ -219,7 +219,8 @@
             const dayOfWeek = daysMap[selectedDateObj.getDay()];
             
             try {
-                const res = await fetch(`/api/schedule?week=${week}&date=${dateInput}&day=${dayOfWeek}`);
+                // Передаем user_id и role на бэкенд для фильтрации подгрупп
+                const res = await fetch(`/api/schedule?week=${week}&date=${dateInput}&day=${dayOfWeek}&user_id=${user.id}&role=${user.role}`);
                 const schedule = await res.json();
                 const container = document.getElementById('schedule-container');
                 
