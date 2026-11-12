@@ -32,9 +32,9 @@ app.get('/api/students', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Умное расписание (привязка ДЗ к конкретной дате)
+// Умное расписание с фильтрацией по подгруппам для студентов
 app.get('/api/schedule', async (req, res) => {
-    const { week, date, day } = req.query;
+    const { week, date, day, user_id, role } = req.query;
     try {
         let query = `
             SELECT s.*, h.homework as date_hw, h.homework_file as date_file
@@ -51,6 +51,18 @@ app.get('/api/schedule', async (req, res) => {
         if (day && day !== 'all') {
             params.push(day);
             query += ` AND s.day_of_week = $${params.length}`;
+        }
+
+        // Если это студент, узнаем его подгруппу и показываем только его подгруппу + общие пары
+        if (role === 'student' && user_id) {
+            const userRes = await pool.query(`SELECT subgroup FROM users WHERE id = $1`, [user_id]);
+            if (userRes.rows.length > 0) {
+                const userSubgroup = userRes.rows[0].subgroup;
+                if (userSubgroup) {
+                    params.push(userSubgroup);
+                    query += ` AND (s.subgroup = $${params.length} OR s.subgroup IS NULL OR s.subgroup = 'Общая' OR s.subgroup = '')`;
+                }
+            }
         }
 
         query += ` ORDER BY CASE s.day_of_week 
@@ -90,7 +102,17 @@ app.post('/api/schedule/update', async (req, res) => {
 app.get('/api/attendance', async (req, res) => {
     const { date, schedule_id } = req.query;
     try {
-        const result = await pool.query(`SELECT student_id, status, comment FROM attendance WHERE date = $1 AND schedule_id = $2`, [date, schedule_id]);
+        let query = `SELECT student_id, status, comment FROM attendance WHERE 1=1`;
+        let params = [];
+        if (date) {
+            params.push(date);
+            query += ` AND date = $${params.length}`;
+        }
+        if (schedule_id) {
+            params.push(schedule_id);
+            query += ` AND schedule_id = $${params.length}`;
+        }
+        const result = await pool.query(query, params);
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -141,7 +163,7 @@ app.get('/api/student-absences', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Получение статуса выполнения ДЗ для студента
+// Статус выполнения ДЗ студентом
 app.get('/api/homework-status', async (req, res) => {
     const { student_id, date, schedule_id } = req.query;
     try {
@@ -155,7 +177,6 @@ app.get('/api/homework-status', async (req, res) => {
     }
 });
 
-// Переключение статуса выполнения ДЗ студентом
 app.post('/api/homework-status', async (req, res) => {
     const { student_id, date, schedule_id, is_completed } = req.body;
     try {
