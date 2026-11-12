@@ -32,7 +32,7 @@ app.get('/api/students', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Умное расписание (привязка ДЗ к дате и фильтр по дню)
+// Умное расписание (привязка ДЗ к конкретной дате)
 app.get('/api/schedule', async (req, res) => {
     const { week, date, day } = req.query;
     try {
@@ -59,7 +59,6 @@ app.get('/api/schedule', async (req, res) => {
             
         const result = await pool.query(query, params);
         
-        // Подменяем шаблонное ДЗ на ДЗ для конкретной даты (если оно есть)
         const rows = result.rows.map(row => ({
             ...row,
             homework: row.date_hw !== null ? row.date_hw : row.homework,
@@ -76,7 +75,6 @@ app.post('/api/schedule/update', async (req, res) => {
     if (userRole !== 'admin') return res.status(403).json({ error: 'Нет прав!' });
     
     try {
-        // Сохраняем именно в таблицу homeworks по дате
         await pool.query(
             `INSERT INTO homeworks (date, schedule_id, homework, homework_file) 
              VALUES ($1, $2, $3, $4)
@@ -141,6 +139,37 @@ app.get('/api/student-absences', async (req, res) => {
         `, [student_id]);
         res.json(result.rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Получение статуса выполнения ДЗ для студента
+app.get('/api/homework-status', async (req, res) => {
+    const { student_id, date, schedule_id } = req.query;
+    try {
+        const result = await pool.query(
+            `SELECT is_completed FROM student_homework_status WHERE student_id = $1 AND date = $2 AND schedule_id = $3`,
+            [student_id, date, schedule_id]
+        );
+        res.json(result.rows[0] || { is_completed: false });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Переключение статуса выполнения ДЗ студентом
+app.post('/api/homework-status', async (req, res) => {
+    const { student_id, date, schedule_id, is_completed } = req.body;
+    try {
+        await pool.query(
+            `INSERT INTO student_homework_status (student_id, date, schedule_id, is_completed) 
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (student_id, date, schedule_id) 
+             DO UPDATE SET is_completed = EXCLUDED.is_completed`,
+            [student_id, date, schedule_id, is_completed]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
