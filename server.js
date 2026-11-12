@@ -32,7 +32,7 @@ app.get('/api/students', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Умное расписание с безопасной фильтрацией подгрупп для студентов
+// Самый надежный эндпоинт расписания с фильтрацией в JavaScript
 app.get('/api/schedule', async (req, res) => {
     const { week, date, day, user_id, role } = req.query;
     try {
@@ -53,29 +53,32 @@ app.get('/api/schedule', async (req, res) => {
             query += ` AND s.day_of_week = $${params.length}`;
         }
 
-        // Безопасная фильтрация для студентов: видят свою подгруппу, общие пары и пустые поля
-        if (role === 'student' && user_id) {
-            const userRes = await pool.query(`SELECT subgroup FROM users WHERE id = $1`, [user_id]);
-            if (userRes.rows.length > 0) {
-                const userSubgroup = String(userRes.rows[0].subgroup || '').trim();
-                if (userSubgroup) {
-                    params.push(userSubgroup);
-                    query += ` AND (s.subgroup = $${params.length} OR s.subgroup IS NULL OR s.subgroup = '' OR s.subgroup = 'Общая' OR s.subgroup = 'общая')`;
-                }
-            }
-        }
-
         query += ` ORDER BY CASE s.day_of_week 
             WHEN 'Понедельник' THEN 1 WHEN 'Вторник' THEN 2 WHEN 'Среда' THEN 3 
             WHEN 'Четверг' THEN 4 WHEN 'Пятница' THEN 5 WHEN 'Суббота' THEN 6 ELSE 7 END, s.pair_number ASC`;
             
         const result = await pool.query(query, params);
         
-        const rows = result.rows.map(row => ({
+        let rows = result.rows.map(row => ({
             ...row,
             homework: row.date_hw !== null ? row.date_hw : row.homework,
             homework_file: row.date_file !== null ? row.date_file : row.homework_file
         }));
+
+        // Если это студент, фильтруем подгруппы прямо здесь (без сбоев БД)
+        if (role === 'student' && user_id) {
+            const userRes = await pool.query(`SELECT subgroup FROM users WHERE id = $1`, [user_id]);
+            if (userRes.rows.length > 0) {
+                const userSubgroup = String(userRes.rows[0].subgroup || '').trim();
+                if (userSubgroup) {
+                    rows = rows.filter(item => {
+                        const itemSub = String(item.subgroup || '').trim();
+                        // Студент видит общие пары, пустые подгруппы и строго свою подгруппу
+                        return !itemSub || itemSub === 'Общая' || itemSub === 'общая' || itemSub === userSubgroup;
+                    });
+                }
+            }
+        }
 
         res.json(rows);
     } catch (err) { res.status(500).json({ error: err.message }); }
