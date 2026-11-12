@@ -19,89 +19,88 @@ app.post('/api/login', async (req, res) => {
     try {
         const query = `SELECT id, login, full_name, subgroup, role FROM users WHERE login = $1 AND password = $2`;
         const result = await pool.query(query, [login, password]);
-        if (result.rows.length === 0) {
-            return res.status(401).json({ error: 'Неверный логин или пароль' });
-        }
+        if (result.rows.length === 0) return res.status(401).json({ error: 'Неверный логин или пароль' });
         res.json(result.rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Список студентов
+// Студенты
 app.get('/api/students', async (req, res) => {
     try {
         const result = await pool.query(`SELECT id, full_name as name, subgroup, login FROM users WHERE role = 'student' ORDER BY full_name`);
         res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Расписание
+// Умное расписание (привязка ДЗ к дате и фильтр по дню)
 app.get('/api/schedule', async (req, res) => {
-    const { week } = req.query;
+    const { week, date, day } = req.query;
     try {
-        let query = `SELECT * FROM schedule`;
-        let params = [];
+        let query = `
+            SELECT s.*, h.homework as date_hw, h.homework_file as date_file
+            FROM schedule s
+            LEFT JOIN homeworks h ON s.id = h.schedule_id AND h.date = $1
+            WHERE 1=1
+        `;
+        let params = [date || null];
+        
         if (week && week !== 'all') {
-            query += ` WHERE week_type = $1`;
             params.push(week);
+            query += ` AND s.week_type = $${params.length}`;
         }
-        query += ` ORDER BY CASE day_of_week 
+        if (day && day !== 'all') {
+            params.push(day);
+            query += ` AND s.day_of_week = $${params.length}`;
+        }
+
+        query += ` ORDER BY CASE s.day_of_week 
             WHEN 'Понедельник' THEN 1 WHEN 'Вторник' THEN 2 WHEN 'Среда' THEN 3 
-            WHEN 'Четверг' THEN 4 WHEN 'Пятница' THEN 5 WHEN 'Суббота' THEN 6 ELSE 7 END, pair_number ASC`;
+            WHEN 'Четверг' THEN 4 WHEN 'Пятница' THEN 5 WHEN 'Суббота' THEN 6 ELSE 7 END, s.pair_number ASC`;
+            
         const result = await pool.query(query, params);
-        res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        
+        // Подменяем шаблонное ДЗ на ДЗ для конкретной даты (если оно есть)
+        const rows = result.rows.map(row => ({
+            ...row,
+            homework: row.date_hw !== null ? row.date_hw : row.homework,
+            homework_file: row.date_file !== null ? row.date_file : row.homework_file
+        }));
+
+        res.json(rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Обновление расписания (ДЗ и файлы)
+// Сохранение ДЗ на конкретную дату
 app.post('/api/schedule/update', async (req, res) => {
-    const { schedule_id, homework, homework_file, userRole } = req.body;
-    if (userRole !== 'admin') {
-        return res.status(403).json({ error: 'Только староста может изменять расписание!' });
-    }
+    const { schedule_id, date, homework, homework_file, userRole } = req.body;
+    if (userRole !== 'admin') return res.status(403).json({ error: 'Нет прав!' });
+    
     try {
+        // Сохраняем именно в таблицу homeworks по дате
         await pool.query(
-            `UPDATE schedule SET homework = $1, homework_file = $2 WHERE id = $3`,
-            [homework || '', homework_file || '', schedule_id]
+            `INSERT INTO homeworks (date, schedule_id, homework, homework_file) 
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (date, schedule_id) 
+             DO UPDATE SET homework = EXCLUDED.homework, homework_file = EXCLUDED.homework_file`,
+            [date, schedule_id, homework || '', homework_file || '']
         );
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Получение посещаемости
 app.get('/api/attendance', async (req, res) => {
     const { date, schedule_id } = req.query;
     try {
-        let query = `SELECT student_id, status, comment FROM attendance WHERE 1=1`;
-        let params = [];
-        if (date) {
-            params.push(date);
-            query += ` AND date = $${params.length}`;
-        }
-        if (schedule_id) {
-            params.push(schedule_id);
-            query += ` AND schedule_id = $${params.length}`;
-        }
-        const result = await pool.query(query, params);
+        const result = await pool.query(`SELECT student_id, status, comment FROM attendance WHERE date = $1 AND schedule_id = $2`, [date, schedule_id]);
         res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Сохранение посещаемости
 app.post('/api/attendance', async (req, res) => {
     const { date, schedule_id, records, userRole } = req.body;
-    if (userRole !== 'admin') {
-        return res.status(403).json({ error: 'Нет прав!' });
-    }
+    if (userRole !== 'admin') return res.status(403).json({ error: 'Нет прав!' });
     try {
         await pool.query(`DELETE FROM attendance WHERE date = $1 AND schedule_id = $2`, [date, schedule_id]);
         for (const r of records) {
@@ -113,50 +112,35 @@ app.post('/api/attendance', async (req, res) => {
             }
         }
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Общая статистика для старосты
+// Статистика группы
 app.get('/api/stats', async (req, res) => {
     try {
-        const query = `
+        const result = await pool.query(`
             SELECT u.id as student_id, u.full_name as name, u.subgroup,
                 SUM(CASE WHEN a.status = 'absent_invalid' THEN 1 ELSE 0 END) as invalid_absences,
                 SUM(CASE WHEN a.status = 'absent_valid' THEN 1 ELSE 0 END) as valid_absences,
                 COUNT(a.id) as total_absences
-            FROM users u
-            LEFT JOIN attendance a ON u.id = a.student_id
-            WHERE u.role = 'student'
-            GROUP BY u.id, u.full_name, u.subgroup
-            ORDER BY total_absences DESC, u.full_name ASC
-        `;
-        const result = await pool.query(query);
+            FROM users u LEFT JOIN attendance a ON u.id = a.student_id
+            WHERE u.role = 'student' GROUP BY u.id, u.full_name, u.subgroup ORDER BY total_absences DESC, u.full_name ASC
+        `);
         res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Личные пропуски студента
+// Пропуски конкретного студента
 app.get('/api/student-absences', async (req, res) => {
     const { student_id } = req.query;
     try {
-        const query = `
+        const result = await pool.query(`
             SELECT a.date, s.day_of_week, s.pair_number, s.subject, a.status, a.comment
-            FROM attendance a
-            JOIN schedule s ON a.schedule_id = s.id
-            WHERE a.student_id = $1
-            ORDER BY a.date DESC
-        `;
-        const result = await pool.query(query, [student_id]);
+            FROM attendance a JOIN schedule s ON a.schedule_id = s.id
+            WHERE a.student_id = $1 ORDER BY a.date DESC
+        `, [student_id]);
         res.json(result.rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.listen(PORT, () => {
-    console.log(`Сервер запущен на порту ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT}`));
