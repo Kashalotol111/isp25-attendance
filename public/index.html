@@ -148,11 +148,9 @@
         </div>
     </div>
 
-    <!-- ТЕПЕРЬ ТЕГ SCRIPT СТОИТ ПРАВИЛЬНО -->
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
         let currentScheduleId = null;
-
         const daysMap = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
 
         if (user) {
@@ -216,7 +214,6 @@
         async function loadSchedule() {
             const dateInput = document.getElementById('attendance-date').value;
             const week = document.getElementById('week-filter').value;
-            
             const selectedDateObj = new Date(dateInput);
             const dayOfWeek = daysMap[selectedDateObj.getDay()];
             
@@ -230,6 +227,16 @@
                     return;
                 }
 
+                // Загружаем статусы выполнения ДЗ для студента (если это студент)
+                let completedMap = {};
+                if (user.role === 'student') {
+                    for (const item of schedule) {
+                        const statusRes = await fetch(`/api/homework-status?student_id=${user.id}&date=${dateInput}&schedule_id=${item.id}`);
+                        const statusData = await statusRes.json();
+                        if (statusData.is_completed) completedMap[item.id] = true;
+                    }
+                }
+
                 container.innerHTML = `
                     <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl space-y-3.5">
                         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -240,40 +247,74 @@
                             <span class="text-xs text-slate-500 font-medium">${schedule.length} пары</span>
                         </div>
                         <div class="space-y-3">
-                            ${schedule.map(item => `
-                                <div onclick="handlePairClick(${item.id}, '${item.subject.replace(/'/g, "\\'")}', '${(item.homework || '').replace(/'/g, "\\'")}', '${item.homework_file || ''}')" 
-                                     class="p-3.5 sm:p-4 bg-slate-950/60 border border-slate-800/80 rounded-2xl flex flex-col gap-3 hover:border-indigo-500/50 transition cursor-pointer">
-                                    <div class="space-y-1">
-                                        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg text-[11px] sm:text-xs font-semibold">Пара ${item.pair_number}</span>
-                                            <span class="px-2 py-0.5 bg-slate-800 text-slate-300 rounded-lg text-[11px] sm:text-xs">Подгруппа: ${item.subgroup || 'Общая'}</span>
-                                            <span class="text-[11px] sm:text-xs text-slate-500 ml-auto">${item.week_type === 'even' ? 'Четная' : 'Нечетная'}</span>
-                                        </div>
-                                        <h3 class="font-semibold text-white text-xs sm:text-sm mt-1">${item.subject}</h3>
-                                        <p class="text-[11px] sm:text-xs text-slate-400">Преподаватель: <span class="text-slate-300">${item.teacher || 'Не указан'}</span></p>
-                                        ${item.homework ? `
-                                            <div class="mt-2 text-xs text-emerald-400 bg-emerald-950/30 border border-emerald-900/30 p-2.5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                                                <span><b>ДЗ:</b> ${item.homework}</span>
-                                                ${item.homework_file ? `<a href="${item.homework_file}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-400 hover:underline font-medium shrink-0">📎 Файл</a>` : ''}
+                            ${schedule.map(item => {
+                                const isDone = completedMap[item.id];
+                                return `
+                                    <div onclick="handlePairClick(${item.id}, '${item.subject.replace(/'/g, "\\'")}', '${(item.homework || '').replace(/'/g, "\\'")}', '${item.homework_file || ''}')" 
+                                         class="p-3.5 sm:p-4 bg-slate-950/60 border ${isDone ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-slate-800/80'} rounded-2xl flex flex-col gap-3 hover:border-indigo-500/50 transition cursor-pointer">
+                                        <div class="space-y-1">
+                                            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                                <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg text-[11px] sm:text-xs font-semibold">Пара ${item.pair_number}</span>
+                                                <span class="px-2 py-0.5 bg-slate-800 text-slate-300 rounded-lg text-[11px] sm:text-xs">Подгруппа: ${item.subgroup || 'Общая'}</span>
+                                                ${isDone ? '<span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-[11px] font-semibold">✓ Выполнено</span>' : ''}
+                                                <span class="text-[11px] sm:text-xs text-slate-500 ml-auto">${item.week_type === 'even' ? 'Четная' : 'Нечетная'}</span>
                                             </div>
-                                        ` : ''}
+                                            <h3 class="font-semibold text-white text-xs sm:text-sm mt-1">${item.subject}</h3>
+                                            <p class="text-[11px] sm:text-xs text-slate-400">Преподаватель: <span class="text-slate-300">${item.teacher || 'Не указан'}</span></p>
+                                            ${item.homework ? `
+                                                <div class="mt-2 text-xs text-emerald-400 bg-emerald-950/30 border border-emerald-900/30 p-2.5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                                                    <span><b>ДЗ:</b> ${item.homework}</span>
+                                                    ${item.homework_file ? `<a href="${item.homework_file}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-400 hover:underline font-medium shrink-0">📎 Файл</a>` : ''}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                        <div class="flex items-center gap-2 w-full justify-between pt-2 border-t border-slate-900" onclick="event.stopPropagation()">
+                                            ${user.role === 'student' && item.homework ? `
+                                                <button onclick="toggleHomeworkStatus(${item.id}, ${!isDone})" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${isDone ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 hover:bg-emerald-600 hover:text-white'}">
+                                                    ${isDone ? 'Снять отметку' : '✓ Сделано'}
+                                                </button>
+                                            ` : '<div></div>'}
+                                            
+                                            ${user.role === 'admin' ? `
+                                                <div class="flex items-center gap-2 ml-auto">
+                                                    <button onclick="openAttendanceModal(${item.id}, '${item.subject.replace(/'/g, "\\'")}')" class="px-3 py-2 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-600/20 transition rounded-xl text-xs font-semibold">
+                                                        Посещаемость
+                                                    </button>
+                                                    <button onclick="openHomeworkModal(${item.id}, '${(item.homework || '').replace(/'/g, "\\'")}', '${item.homework_file || ''}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition rounded-xl text-xs font-medium">
+                                                        ДЗ
+                                                    </button>
+                                                </div>
+                                            ` : ''}
+                                        </div>
                                     </div>
-                                    <div class="flex items-center gap-2 w-full justify-end pt-2 border-t border-slate-900" onclick="event.stopPropagation()">
-                                        ${user.role === 'admin' ? `
-                                            <button onclick="openAttendanceModal(${item.id}, '${item.subject.replace(/'/g, "\\'")}')" class="flex-1 sm:flex-none px-3 py-2 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-600/20 transition rounded-xl text-xs font-semibold text-center">
-                                                Посещаемость
-                                            </button>
-                                            <button onclick="openHomeworkModal(${item.id}, '${(item.homework || '').replace(/'/g, "\\'")}', '${item.homework_file || ''}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition rounded-xl text-xs font-medium text-center">
-                                                ДЗ на эту дату
-                                            </button>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 `;
             } catch (err) { console.error(err); }
+        }
+
+        // Функция переключения статуса выполнения ДЗ
+        async function toggleHomeworkStatus(scheduleId, isCompleted) {
+            const date = document.getElementById('attendance-date').value;
+            try {
+                const res = await fetch('/api/homework-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        student_id: user.id,
+                        date,
+                        schedule_id: scheduleId,
+                        is_completed: isCompleted
+                    })
+                });
+                if (res.ok) {
+                    loadSchedule(); // Перезагружаем расписание, чтобы обновить цвета и плашку
+                } else {
+                    alert('Ошибка обновления статуса');
+                }
+            } catch (err) { alert('Ошибка сервера'); }
         }
 
         async function handlePairClick(scheduleId, subject, hw, file) {
@@ -287,8 +328,12 @@
             document.getElementById('pair-detail-modal').classList.remove('hidden');
 
             try {
-                const res = await fetch(`/api/attendance?date=${date}&schedule_id=${scheduleId}`);
-                const attendance = await res.json();
+                const [attRes, statusRes] = await Promise.all([
+                    fetch(`/api/attendance?date=${date}&schedule_id=${scheduleId}`),
+                    fetch(`/api/homework-status?student_id=${user.id}&date=${date}&schedule_id=${scheduleId}`)
+                ]);
+                const attendance = await attRes.json();
+                const statusData = await statusRes.json();
                 const myRecord = attendance.find(a => a.student_id === user.id);
 
                 let statusText = '<span class="text-emerald-400 font-semibold">Присутствует / Не отмечен</span>';
@@ -304,10 +349,13 @@
                             <p class="text-xs sm:text-sm">${statusText}</p>
                             ${myRecord && myRecord.comment ? `<p class="text-xs text-slate-400 mt-2"><b>Комментарий:</b> ${myRecord.comment}</p>` : ''}
                         </div>
-                        <div class="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                            <p class="text-[11px] text-slate-400 uppercase font-semibold mb-1">Домашнее задание на эту дату:</p>
+                        <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <p class="text-[11px] text-slate-400 uppercase font-semibold">Домашнее задание:</p>
+                                <span class="text-xs font-semibold ${statusData.is_completed ? 'text-emerald-400' : 'text-slate-500'}">${statusData.is_completed ? '✓ Выполнено вами' : 'Не выполнено'}</span>
+                            </div>
                             <p class="text-white text-xs sm:text-sm">${hw || 'Не задано'}</p>
-                            ${file ? `<div class="mt-2"><a href="${file}" target="_blank" class="text-indigo-400 hover:underline text-xs font-semibold inline-flex items-center gap-1">📎 Открыть файл</a></div>` : ''}
+                            ${file ? `<div><a href="${file}" target="_blank" class="text-indigo-400 hover:underline text-xs font-semibold inline-flex items-center gap-1">📎 Открыть файл</a></div>` : ''}
                         </div>
                     </div>
                 `;
