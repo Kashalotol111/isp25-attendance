@@ -175,6 +175,15 @@
         const daysMap = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
         const dayNamesList = ['all', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
 
+        // Расписание звонков
+        const pairTimes = {
+            1: '08:30 – 10:00',
+            2: '10:10 – 11:40',
+            3: '12:10 – 13:40',
+            4: '13:50 – 15:20',
+            5: '15:30 – 17:00'
+        };
+
         function getLocalISO(d) {
             const year = d.getFullYear();
             const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -188,7 +197,6 @@
             return `${d}.${m}.${y.slice(-2)}`;
         }
 
-        // Официальный расчет учебной недели от 1 сентября
         function getAcademicWeekType(dateStr) {
             const [y, m, d] = dateStr.split('-');
             const dateObj = new Date(y, m - 1, d);
@@ -266,27 +274,23 @@
             if (activeBtn) activeBtn.className = 'px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-semibold transition shadow-sm';
         }
 
-        // УМНЫЙ ВЫБОР НЕДЕЛИ БЕЗ БЕСКОНЕЧНОГО УХОДА В ПЛЮС
         function setWeekFilter(week) {
             const todayStr = getLocalISO(new Date());
             const realCurrentWeek = getAcademicWeekType(todayStr);
             const dateInput = document.getElementById('attendance-date');
 
             if (week === 'current') {
-                // Кнопка «Текущая» всегда возвращает на реальный сегодняшний день
                 dateInput.value = todayStr;
                 currentWeekFilter = realCurrentWeek;
             } else if (week === 'all') {
                 currentWeekFilter = 'all';
             } else {
-                // Если запрашиваемая неделя совпадает с реальной текущей, ставим реальную сегодняшнюю дату
                 if (week === realCurrentWeek) {
                     dateInput.value = todayStr;
                 } else {
-                    // Иначе сдвигаем текущую реальную дату ровно на 7 дней вперед/назад, предотвращая уход в космос
                     const [y, m, d] = todayStr.split('-');
                     let targetDate = new Date(y, m - 1, d);
-                    targetDate.setDate(targetDate.getDate() + (week === realCurrentWeek ? 0 : 7));
+                    targetDate.setDate(targetDate.getDate() + 7);
                     dateInput.value = getLocalISO(targetDate);
                 }
                 currentWeekFilter = week;
@@ -438,12 +442,18 @@
                                     const safeSubject = (item.subject || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
                                     const safeHw = (item.homework || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
                                     
+                                    // Время пары и аудитория
+                                    const timeStr = pairTimes[item.pair_number] || '';
+                                    const roomStr = item.room ? `Ауд. ${item.room}` : '';
+                                    
                                     return `
                                         <div onclick="handlePairClick(${item.id}, '${safeSubject}', '${safeHw}', '${item.homework_file || ''}', '${dayDateIso}')" 
                                              class="p-3.5 sm:p-4 bg-slate-950/60 border ${isDone ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-slate-800/80'} rounded-2xl flex flex-col gap-3 hover:border-indigo-500/50 transition cursor-pointer">
                                             <div class="space-y-1">
                                                 <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
                                                     <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg text-[11px] sm:text-xs font-semibold">Пара ${item.pair_number}</span>
+                                                    ${timeStr ? `<span class="px-2 py-0.5 bg-slate-900 text-slate-300 border border-slate-800 rounded-lg text-[11px]">🕒 ${timeStr}</span>` : ''}
+                                                    ${roomStr ? `<span class="px-2 py-0.5 bg-slate-900 text-amber-400 border border-slate-800 rounded-lg text-[11px] font-semibold">🚪 ${roomStr}</span>` : ''}
                                                     <span class="px-2 py-0.5 bg-slate-800 text-slate-300 rounded-lg text-[11px] sm:text-xs">Подгруппа: ${item.subgroup || 'Общая'}</span>
                                                     ${isDone ? '<span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-[11px] font-semibold">✓ Выполнено</span>' : ''}
                                                     <span class="text-[11px] sm:text-xs text-slate-500 ml-auto">${item.week_type === 'even' ? 'Четная' : 'Нечетная'}</span>
