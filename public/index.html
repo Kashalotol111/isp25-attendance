@@ -68,7 +68,7 @@
                         
                         <!-- Выбор недели -->
                         <div class="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-start bg-slate-950 p-1.5 border border-slate-800 rounded-2xl">
-                            <button onclick="setWeekFilter('odd')" id="btn-week-odd" class="flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white shadow-sm">Нечетная</button>
+                            <button onclick="setWeekFilter('odd')" id="btn-week-odd" class="flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-white">Нечетная</button>
                             <button onclick="setWeekFilter('even')" id="btn-week-even" class="flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-white">Четная</button>
                             <button onclick="setWeekFilter('all')" id="btn-week-all" class="flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-white">Все</button>
                         </div>
@@ -76,7 +76,7 @@
 
                     <!-- Выбор дня недели -->
                     <div class="pt-3 border-t border-slate-800/80 flex flex-wrap gap-1.5 justify-center sm:justify-start">
-                        <button onclick="setDayFilter('all')" id="btn-day-all" class="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-semibold transition">Все дни</button>
+                        <button onclick="setDayFilter('all')" id="btn-day-all" class="px-3 py-1.5 bg-slate-950 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition">Все дни</button>
                         <button onclick="setDayFilter('Понедельник')" id="btn-day-Понедельник" class="px-3 py-1.5 bg-slate-950 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition">Пн</button>
                         <button onclick="setDayFilter('Вторник')" id="btn-day-Вторник" class="px-3 py-1.5 bg-slate-950 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition">Вт</button>
                         <button onclick="setDayFilter('Среда')" id="btn-day-Среда" class="px-3 py-1.5 bg-slate-950 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition">Ср</button>
@@ -174,56 +174,88 @@
         const daysMap = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
         const dayNamesList = ['all', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
 
-        // Функция для вычисления правильных дат для всех дней текущей недели
+        // --- УМНЫЕ ДАТЫ ---
+        // Возвращает строку YYYY-MM-DD для создания дат без багов часовых поясов
+        function getLocalISO(d) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Преобразование YYYY-MM-DD в красивый формат DD.MM.YY (например 12.11.26)
+        function formatDateFriendly(isoStr) {
+            if (!isoStr) return '';
+            const [y, m, d] = isoStr.split('-');
+            return `${d}.${m}.${y.slice(-2)}`;
+        }
+
+        // Расчет типа недели от 1 сентября текущего учебного года! (Официальный метод колледжей)
+        function getAcademicWeekType(dateStr) {
+            const [y, m, d] = dateStr.split('-');
+            const dateObj = new Date(y, m - 1, d);
+            
+            let year = dateObj.getFullYear();
+            if (dateObj.getMonth() < 8) year -= 1; // До сентября - прошлый учебный год
+            
+            const sept1 = new Date(year, 8, 1);
+            const sept1Day = sept1.getDay() || 7;
+            const firstMonday = new Date(sept1);
+            firstMonday.setDate(sept1.getDate() - sept1Day + 1);
+            
+            const diffDays = Math.round((dateObj.getTime() - firstMonday.getTime()) / 86400000);
+            const weekNo = Math.floor(diffDays / 7) + 1;
+            
+            return weekNo % 2 === 0 ? 'even' : 'odd';
+        }
+
+        // Получить все даты (Пн-Вс) для недели, в которой находится базовая дата
         function getWeekDates(baseDateStr) {
-            const date = new Date(baseDateStr);
-            const dayOfWeek = date.getDay();
+            const [y, m, d] = baseDateStr.split('-');
+            const localDate = new Date(y, m - 1, d);
+            
+            const dayOfWeek = localDate.getDay();
             const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
             
-            const monday = new Date(date);
-            monday.setDate(date.getDate() + diffToMonday);
+            const monday = new Date(localDate);
+            monday.setDate(localDate.getDate() + diffToMonday);
 
             const result = {};
             for (let i = 0; i < 7; i++) {
                 const current = new Date(monday);
                 current.setDate(monday.getDate() + i);
-                const isoDate = current.toISOString().split('T')[0];
-                result[daysMap[current.getDay()]] = isoDate;
+                result[daysMap[current.getDay()]] = getLocalISO(current);
             }
             return result;
         }
 
-        // Преобразование YYYY-MM-DD в формат DD.MM.YY (например 12.11.26)
-        function formatDateFriendly(dateStr) {
-            if (!dateStr) return '';
-            const [y, m, d] = dateStr.split('-');
-            return `${d}.${m}.${y.slice(-2)}`;
-        }
-
+        // Инициализация
         if (user) {
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('app-view').classList.remove('hidden');
             document.getElementById('user-info').textContent = `${user.full_name} (${user.role === 'admin' ? 'Староста' : user.role === 'kurator' ? 'Куратор' : 'Студент'})`;
             
-            // Ставим сегодняшнюю дату при загрузке и выбираем нужную кнопку дня
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getLocalISO(new Date());
             document.getElementById('attendance-date').value = todayStr;
-            const todayName = daysMap[new Date(todayStr).getDay()];
-            currentDayFilter = todayName;
+            
+            currentWeekFilter = getAcademicWeekType(todayStr);
+            currentDayFilter = daysMap[new Date().getDay()] || 'Понедельник';
+            if(currentDayFilter === 'Воскресенье') currentDayFilter = 'all'; // В воскресенье показываем все
+
+            updateWeekButtons();
             updateDayButtons();
             
             loadSchedule();
         }
 
-        function setWeekFilter(week) {
-            currentWeekFilter = week;
+        // Обновление UI кнопок
+        function updateWeekButtons() {
             ['odd', 'even', 'all'].forEach(w => {
                 const btn = document.getElementById(`btn-week-${w}`);
                 if (btn) btn.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-white';
             });
-            const activeBtn = document.getElementById(`btn-week-${week}`);
+            const activeBtn = document.getElementById(`btn-week-${currentWeekFilter}`);
             if (activeBtn) activeBtn.className = 'flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white shadow-sm';
-            loadSchedule();
         }
 
         function updateDayButtons() {
@@ -232,31 +264,59 @@
                 if (btn) btn.className = 'px-3 py-1.5 bg-slate-950 border border-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition';
             });
             const activeBtn = document.getElementById(`btn-day-${currentDayFilter}`);
-            if (activeBtn) activeBtn.className = 'px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-semibold transition';
+            if (activeBtn) activeBtn.className = 'px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-semibold transition shadow-sm';
+        }
+
+        // Переключение фильтров по клику
+        function setWeekFilter(week) {
+            if (week !== 'all') {
+                const dateInput = document.getElementById('attendance-date');
+                const [y, m, d] = dateInput.value.split('-');
+                let currentDate = new Date(y, m - 1, d);
+                
+                // Если мы переключили тип недели, а текущая дата не совпадает - сдвигаем её ровно на 7 дней вперед!
+                if (getAcademicWeekType(dateInput.value) !== week) {
+                    currentDate.setDate(currentDate.getDate() + 7);
+                    dateInput.value = getLocalISO(currentDate);
+                }
+            }
+            
+            currentWeekFilter = week;
+            updateWeekButtons();
+            loadSchedule();
         }
 
         function setDayFilter(day) {
             currentDayFilter = day;
             updateDayButtons();
             
-            // Если выбран конкретный день, автоматически меняем дату в календаре на дату этого дня!
+            // Если выбран конкретный день, календарь сам меняет дату на нужную в этой неделе!
             if (day !== 'all') {
-                const baseDateStr = document.getElementById('attendance-date').value || new Date().toISOString().split('T')[0];
-                const weekDates = getWeekDates(baseDateStr);
-                document.getElementById('attendance-date').value = weekDates[day];
+                const dateInput = document.getElementById('attendance-date');
+                const weekDates = getWeekDates(dateInput.value);
+                if (weekDates[day]) {
+                    dateInput.value = weekDates[day];
+                }
             }
             
             loadSchedule();
         }
 
-        // Если пользователь сам меняет дату в календаре, обновляем кнопку дня
+        // Если пользователь сам крутит дату в календаре
         document.getElementById('attendance-date').addEventListener('change', (e) => {
-            const dateObj = new Date(e.target.value);
+            const val = e.target.value;
+            const [y, m, d] = val.split('-');
+            const dateObj = new Date(y, m - 1, d);
+            
             currentDayFilter = daysMap[dateObj.getDay()];
+            currentWeekFilter = getAcademicWeekType(val); // Система сама понимает, четная или нечетная!
+            
             updateDayButtons();
+            updateWeekButtons();
             loadSchedule();
         });
 
+        // Логин/Логаут/Табы
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const login = document.getElementById('login').value.trim();
@@ -303,17 +363,11 @@
 
         async function loadSchedule() {
             let dateInput = document.getElementById('attendance-date').value;
-            if (!dateInput) {
-                dateInput = new Date().toISOString().split('T')[0];
-                document.getElementById('attendance-date').value = dateInput;
-            }
-
             const weekDates = getWeekDates(dateInput);
             
             try {
                 let schedule = [];
 
-                // Если "Все дни", загружаем расписание для каждого дня текущей недели отдельно
                 if (currentDayFilter === 'all') {
                     const daysToFetch = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
                     const promises = daysToFetch.map(day => 
@@ -353,7 +407,8 @@
                 container.innerHTML = Object.keys(grouped).sort((a, b) => daysOrder.indexOf(a) - daysOrder.indexOf(b)).map(day => {
                     const dayPairs = grouped[day];
                     const dayDateIso = weekDates[day]; 
-                    const formattedDate = formatDateFriendly(dayDateIso); // Формат: 12.11.26
+                    // Формируем красивую дату: "Пятница (13.11.26)"
+                    const formattedDate = formatDateFriendly(dayDateIso);
                     
                     return `
                         <div class="bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xl space-y-3.5">
