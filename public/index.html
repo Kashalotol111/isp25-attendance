@@ -151,6 +151,7 @@
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
         let currentScheduleId = null;
+        let currentPairSubgroup = null;
         const daysMap = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
 
         if (user) {
@@ -227,7 +228,6 @@
                     return;
                 }
 
-                // Загружаем статусы выполнения ДЗ для студента (если это студент)
                 let completedMap = {};
                 if (user.role === 'student') {
                     for (const item of schedule) {
@@ -277,7 +277,7 @@
                                             
                                             ${user.role === 'admin' ? `
                                                 <div class="flex items-center gap-2 ml-auto">
-                                                    <button onclick="openAttendanceModal(${item.id}, '${item.subject.replace(/'/g, "\\'")}')" class="px-3 py-2 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-600/20 transition rounded-xl text-xs font-semibold">
+                                                    <button onclick="openAttendanceModal(${item.id}, '${item.subject.replace(/'/g, "\\'")}', '${item.subgroup || ''}')" class="px-3 py-2 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-600/20 transition rounded-xl text-xs font-semibold">
                                                         Посещаемость
                                                     </button>
                                                     <button onclick="openHomeworkModal(${item.id}, '${(item.homework || '').replace(/'/g, "\\'")}', '${item.homework_file || ''}')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition rounded-xl text-xs font-medium">
@@ -295,25 +295,16 @@
             } catch (err) { console.error(err); }
         }
 
-        // Функция переключения статуса выполнения ДЗ
         async function toggleHomeworkStatus(scheduleId, isCompleted) {
             const date = document.getElementById('attendance-date').value;
             try {
                 const res = await fetch('/api/homework-status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        student_id: user.id,
-                        date,
-                        schedule_id: scheduleId,
-                        is_completed: isCompleted
-                    })
+                    body: JSON.stringify({ student_id: user.id, date, schedule_id: scheduleId, is_completed: isCompleted })
                 });
-                if (res.ok) {
-                    loadSchedule(); // Перезагружаем расписание, чтобы обновить цвета и плашку
-                } else {
-                    alert('Ошибка обновления статуса');
-                }
+                if (res.ok) { loadSchedule(); }
+                else { alert('Ошибка обновления статуса'); }
             } catch (err) { alert('Ошибка сервера'); }
         }
 
@@ -385,51 +376,69 @@
             } catch (err) { alert('Ошибка сервера'); }
         }
 
-        async function openAttendanceModal(scheduleId, subjectName) {
+        async function openAttendanceModal(scheduleId, subjectName, subgroup) {
             currentScheduleId = scheduleId;
+            currentPairSubgroup = subgroup ? subgroup.trim() : '';
             const date = document.getElementById('attendance-date').value;
-            document.getElementById('modal-title').textContent = `${subjectName} (${date})`;
+            
+            let subTitle = currentPairSubgroup ? ` (Подгруппа ${currentPairSubgroup})` : ' (Общая пара)';
+            document.getElementById('modal-title').textContent = `${subjectName}${subTitle} — ${date}`;
             
             try {
                 const [studentsRes, attRes] = await Promise.all([
                     fetch('/api/students'),
                     fetch(`/api/attendance?date=${date}&schedule_id=${scheduleId}`)
                 ]);
-                const students = await studentsRes.json();
+                let students = await studentsRes.json();
                 const attendance = await attRes.json();
+                
+                if (currentPairSubgroup && currentPairSubgroup !== 'Общая' && currentPairSubgroup !== '') {
+                    students = students.filter(s => String(s.subgroup) === String(currentPairSubgroup));
+                }
+
                 const attMap = {};
                 attendance.forEach(a => { attMap[a.student_id] = a; });
 
-                document.getElementById('students-container').innerHTML = students.map(s => {
-                    const record = attMap[s.id] || { status: 'present', comment: '' };
-                    return `
-                        <div class="py-3 px-1 flex flex-col gap-2 student-row" data-id="${s.id}">
-                            <div>
-                                <p class="font-medium text-xs text-white">${s.name}</p>
-                                <span class="text-[10px] text-slate-500">Подгруппа: ${s.subgroup || 1}</span>
+                const container = document.getElementById('students-container');
+                if (students.length === 0) {
+                    container.innerHTML = '<p class="text-slate-400 text-xs text-center py-4">В этой подгруппе не найдено студентов.</p>';
+                } else {
+                    container.innerHTML = students.map(s => {
+                        const record = attMap[s.id] || { status: 'present', comment: '' };
+                        return `
+                            <div class="py-3 px-1 flex flex-col gap-2 student-row" data-id="${s.id}">
+                                <div>
+                                    <p class="font-medium text-xs text-white">${s.name}</p>
+                                    <span class="text-[10px] text-slate-500">Подгруппа: ${s.subgroup || 1}</span>
+                                </div>
+                                <div class="flex items-center gap-2 w-full">
+                                    <select class="status-select flex-1 bg-slate-950 border border-slate-800 text-xs px-2.5 py-2 rounded-xl text-white">
+                                        <option value="present" ${record.status === 'present' ? 'selected' : ''}>Присутствует</option>
+                                        <option value="absent_invalid" ${record.status === 'absent_invalid' ? 'selected' : ''}>Н (неув)</option>
+                                        <option value="absent_valid" ${record.status === 'absent_valid' ? 'selected' : ''}>Н (ув)</option>
+                                    </select>
+                                    <input type="text" placeholder="Комментарий" value="${record.comment || ''}" class="comment-input w-28 bg-slate-950 border border-slate-800 text-xs px-2.5 py-2 rounded-xl text-white">
+                                </div>
                             </div>
-                            <div class="flex items-center gap-2 w-full">
-                                <select class="status-select flex-1 bg-slate-950 border border-slate-800 text-xs px-2.5 py-2 rounded-xl text-white">
-                                    <option value="present" ${record.status === 'present' ? 'selected' : ''}>Присутствует</option>
-                                    <option value="absent_invalid" ${record.status === 'absent_invalid' ? 'selected' : ''}>Н (неув)</option>
-                                    <option value="absent_valid" ${record.status === 'absent_valid' ? 'selected' : ''}>Н (ув)</option>
-                                </select>
-                                <input type="text" placeholder="Комментарий" value="${record.comment || ''}" class="comment-input w-28 bg-slate-950 border border-slate-800 text-xs px-2.5 py-2 rounded-xl text-white">
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                        `;
+                    }).join('');
+                }
                 document.getElementById('attendance-modal').classList.remove('hidden');
-            } catch (err) { alert('Ошибка'); }
+            } catch (err) { alert('Ошибка загрузки'); }
         }
 
         async function saveAttendance() {
             const date = document.getElementById('attendance-date').value;
-            const records = Array.from(document.querySelectorAll('.student-row')).map(row => ({
-                student_id: row.getAttribute('data-id'),
-                status: row.querySelector('.status-select').value,
-                comment: row.querySelector('.comment-input').value
-            }));
+            const rows = document.querySelectorAll('.student-row');
+            const records = [];
+
+            rows.forEach(row => {
+                records.push({
+                    student_id: row.getAttribute('data-id'),
+                    status: row.querySelector('.status-select').value,
+                    comment: row.querySelector('.comment-input').value
+                });
+            });
 
             try {
                 const res = await fetch('/api/attendance', {
